@@ -5,17 +5,13 @@ Org-owned monorepo for agent-native QE tooling used across ExperienceQuality Sat
 ## Language
 
 **xq-qe-box**:
-The Satellite that stores skills (skills registry), install scripts, the `xq-qe` wrapper CLI package, and future QE packages.
+The Satellite that stores skills (skills registry), install scripts, and future QE CLI/packages.
 _Avoid_: motest, parallel mobile-control CLI, Hub (this is not the Agent Context Hub)
 
-**xq-qe**:
-The wrapper CLI binary/package published from `packages/xq-qe`. Day one: doctor/help and install pairing with upstream `agent-device`. Not a second device-automation engine.
-_Avoid_: agent-device (upstream product name — keep distinct), motest
-
 **agent-device**:
-Upstream Callstack CLI that inspects, controls, and verifies apps on device/simulator targets. Installed alongside `xq-qe` by `scripts/install-cli.sh`. Agents read its installed `help` topics for command contracts.
-_Avoid_: Our CLI (say xq-qe or agent-device explicitly)
+Upstream Callstack CLI that inspects, controls, and verifies apps on device/simulator targets. Installed by `scripts/install-cli.sh`. Agents read its installed `help` topics for command contracts.
+_Avoid_: Our CLI (say agent-device or a future package name explicitly)
 
-**Skill (xq-qe)**:
-Thin router under `skills/xq-qe` for skill-aware agents. Points at `xq-qe doctor` and version-matched `agent-device help …`. Does not duplicate the CLI manual.
-_Avoid_: Full command cookbook in SKILL.md
+**Skill**:
+A folder under `skills/<name>/` with `SKILL.md` (Agent Skills format). Published by being on the public GitHub repo — discovered via `npx skills add ExperienceQuality/xq-qe-box`. Thin routers point at install + version-matched `agent-device help …`.
+_Avoid_: Full command cookbook in SKILL.md; separate npm “publish” for skills

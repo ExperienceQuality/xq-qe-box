@@ -1,16 +1,12 @@
 {
   "name": "xq-qe-box",
   "private": true,
-  "description": "XQ agent-native QE monorepo — skills, install script, wrapper CLI, packages",
+  "description": "XQ agent-native QE monorepo — skills, install script, future CLI/packages",
   "license": "MIT",
   "engines": {
     "node": ">=22.12.0"
   },
   "workspaces": [
     "packages/*"
-  ],
-  "scripts": {
-    "xq-qe": "node packages/xq-qe/bin/xq-qe.js",
-    "doctor": "node packages/xq-qe/bin/xq-qe.js doctor"
-  }
+  ]
 }
