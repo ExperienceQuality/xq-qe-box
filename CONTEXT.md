@@ -2,6 +2,8 @@
 
 Org-owned monorepo for agent-native QE tooling used across ExperienceQuality Satellites.
 
+**Hub:** catalogue — [`docs/satellites.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/satellites.md) (`satellite:xq-qe-box`) · Spec — [`docs/specs/xq-qe-box.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md)
+
 ## Language
 
 **xq-qe-box**:

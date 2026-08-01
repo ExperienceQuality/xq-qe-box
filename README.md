@@ -4,7 +4,7 @@ ExperienceQuality Satellite for **agent-native QE**: skills (skills registry), i
 
 Wraps upstream [agent-device](https://github.com/callstack/agent-device) — this repo does not reimplement device automation.
 
-Hub Spec: [docs/specs/xq-qe-box.md](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md)
+**Hub satellite ref:** catalogue row + Ticket label [`satellite:xq-qe-box`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/satellites.md) · Spec [`docs/specs/xq-qe-box.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md)
 
 ## Layout
 
