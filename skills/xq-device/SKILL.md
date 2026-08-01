@@ -4,6 +4,8 @@ description: >-
   XQ agent-native device QE using upstream agent-device CLI. Use when installing
   QE tooling, driving or verifying apps on iOS/Android simulators or devices,
   or planning agent-device shell commands for ExperienceQuality apps.
+license: MIT
+compatibility: Requires Node.js >= 22.12 and network access to install agent-device via npm.
 ---
 
 # xq-device
@@ -14,17 +16,27 @@ Router only. Private setup before using this skill:
 agent-device --version
 ```
 
-If that fails, stop and tell the user to install via [ExperienceQuality/xq-qe-box](https://github.com/ExperienceQuality/xq-qe-box):
+If that fails, install the pinned CLI with this skill's script (do not invent another install path):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ExperienceQuality/xq-qe-box/main/scripts/install-cli.sh | bash
+bash scripts/install-cli.sh
 ```
 
-Or, from a clone: `bash scripts/install-cli.sh`.
+The script lives next to this `SKILL.md` at `scripts/install-cli.sh`. From a clone of [ExperienceQuality/xq-qe-box](https://github.com/ExperienceQuality/xq-qe-box) before the skill is installed:
+
+```bash
+bash skills/xq-device/scripts/install-cli.sh
+```
+
+Or:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ExperienceQuality/xq-qe-box/main/skills/xq-device/scripts/install-cli.sh | bash
+```
 
 Do **not** autonomously run `npm install -g agent-device@latest` or `npx -y agent-device@latest`. The install script pins versions; upgrades need explicit user approval.
 
-Require `agent-device >= 0.20.0`. If older, stop and ask the user to re-run the install script or approve an exact-version bump.
+Require `agent-device >= 0.20.0`. If older, stop and ask the user to re-run `scripts/install-cli.sh` or approve an exact-version bump.
 
 Before your first device command or plan, read the smallest version-matched CLI guide that fits the task:
 

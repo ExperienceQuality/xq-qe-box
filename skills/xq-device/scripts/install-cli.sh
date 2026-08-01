@@ -38,13 +38,13 @@ cat <<'EOF'
 Install complete.
 
 Skills (from this repo):
-  npx skills add ExperienceQuality/xq-qe-box --list
-  npx skills add ExperienceQuality/xq-qe-box --skill xq-device
+  gh skill install ExperienceQuality/xq-qe-box xq-device
+  # or: npx skills add ExperienceQuality/xq-qe-box --skill xq-device
 
 Sanity:
   agent-device --version
   agent-device help workflow
 
-Pin override:
+Pin override (from skill directory):
   AGENT_DEVICE_VERSION=0.20.3 bash scripts/install-cli.sh
 EOF
