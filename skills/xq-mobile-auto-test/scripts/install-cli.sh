@@ -38,8 +38,8 @@ cat <<'EOF'
 Install complete.
 
 Skills (from this repo):
-  gh skill install ExperienceQuality/xq-qe-box xq-device
-  # or: npx skills add ExperienceQuality/xq-qe-box --skill xq-device
+  gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
+  # or: npx skills add ExperienceQuality/xq-qe-box --skill xq-mobile-auto-test
 
 Sanity:
   agent-device --version
