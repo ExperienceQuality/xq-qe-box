@@ -1,14 +1,14 @@
 ---
-name: xq-device
+name: xq-mobile-auto-test
 description: >-
-  XQ agent-native device QE using upstream agent-device CLI. Use when installing
-  QE tooling, driving or verifying apps on iOS/Android simulators or devices,
-  or planning agent-device shell commands for ExperienceQuality apps.
+  XQ agent-native mobile auto-test using upstream agent-device CLI. Use when
+  installing QE tooling, driving or verifying apps on iOS/Android simulators or
+  devices, or planning agent-device shell commands for ExperienceQuality apps.
 license: MIT
 compatibility: Requires Node.js >= 22.12 and network access to install agent-device via npm.
 ---
 
-# xq-device
+# xq-mobile-auto-test
 
 Router only. Private setup before using this skill:
 
@@ -25,13 +25,13 @@ bash scripts/install-cli.sh
 The script lives next to this `SKILL.md` at `scripts/install-cli.sh`. From a clone of [ExperienceQuality/xq-qe-box](https://github.com/ExperienceQuality/xq-qe-box) before the skill is installed:
 
 ```bash
-bash skills/xq-device/scripts/install-cli.sh
+bash skills/xq-mobile-auto-test/scripts/install-cli.sh
 ```
 
 Or:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ExperienceQuality/xq-qe-box/main/skills/xq-device/scripts/install-cli.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ExperienceQuality/xq-qe-box/main/skills/xq-mobile-auto-test/scripts/install-cli.sh | bash
 ```
 
 Do **not** autonomously run `npm install -g agent-device@latest` or `npx -y agent-device@latest`. The install script pins versions; upgrades need explicit user approval.
