@@ -12,8 +12,8 @@ Failures always include `error`, `exitCode`, and optional `hint`.
 ## Typical session
 
 ```bash
-xq-motest devicekit install --sim
-xq-motest devicekit start --sim
+# DeviceKit runner already installed by agent-host infra
+xq-motest devicekit start --sim --device <UDID>
 xq-motest health
 xq-motest launch com.example.app
 xq-motest map
@@ -27,28 +27,27 @@ xq-motest map                    # refresh refs after tap
 | Variable | Default |
 | --- | --- |
 | `XQ_MOTEST_BASE_URL` | `http://127.0.0.1:12004` |
-| `XQ_MOTEST_TIMEOUT` | `30` |
+| `XQ_MOTEST_TIMEOUT` | `30` (bounds WS RPC, health wait, ensure; CLI `--timeout`) |
 | `XQ_MOTEST_STATE_DIR` | `~/.xq-motest` |
 | `XQ_MOTEST_DEVICE` | _(optional UDID)_ |
 
 ## Simulator vs real device
 
-| Target | Install | Start |
+| Target | Infra | CLI start |
 | --- | --- | --- |
-| Simulator | `devicekit install --sim` | `devicekit start --sim` |
-| Real device | `install --device UDID --provisioning-profile PATH` | `devicekit start --device UDID` |
+| Simulator | Install DeviceKit `.app` on sim | `devicekit start --sim --device UDID` |
+| Real device | Install signed DeviceKit `.ipa` on device | `devicekit start --device UDID` |
 
-Real device: unsigned IPA from devicekit-ios releases → Swift resign → `devicectl`.
-Start uses `xcodebuild test-without-building` (Xcode-only; no iproxy/go-ios).
+Start uses `simctl launch` (sim) or `xcodebuild test-without-building` (device).
 
 ## Troubleshooting
 
 | Symptom | Try |
 | --- | --- |
-| Connection refused | `devicekit start --sim` then `health` (or rely on auto-start after install) |
+| Connection refused | `devicekit start --sim` then `health` (or rely on auto-start) |
 | Unknown `@eN` | `map` first |
 | Stale refs after tap | `map` again before next `@eN` |
-| Runner not installed | `devicekit install --sim` |
+| Runner not found | Install DeviceKit runner via agent-host infra, then `devicekit start` |
 
 ## Verify without live DeviceKit
 

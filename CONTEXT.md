@@ -2,21 +2,33 @@
 
 Org-owned monorepo for agent-native QE tooling used across ExperienceQuality Satellites.
 
-**Hub:** catalogue — [`docs/satellites.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/satellites.md) (`satellite:xq-qe-box`) · Spec — [`docs/specs/xq-qe-box.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md)
+**Hub:** catalogue — [`docs/satellites.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/satellites.md) (`satellite:xq-qe-box`) · Spec — [`docs/specs/xq-qe-box.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md) · Deepenings — [`docs/specs/xq-motest-deep-modules.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-motest-deep-modules.md)
 
 ## Language
 
 **xq-qe-box**:
-The Satellite that stores skills (skills registry), the `xq-motest` CLI, install helpers, and related packages.
+The Satellite that stores skills (skills registry), the `xq-motest` CLI, and related packages.
 _Avoid_: Hub (this is not the Agent Context Hub)
 
 **xq-motest**:
-XQ’s agent-native iOS CLI under `cli/xq-motest/`. Talks **directly to DeviceKit** (JSON-RPC). Cloned from `xq-versastacks` `xq-ios-act-cli` and renamed.
-_Avoid_: xq-ios-act (old name); agent-device (different stack)
+XQ’s agent-native iOS CLI under `cli/xq-motest/`. Talks **directly to DeviceKit** (JSON-RPC). Cloned from `xq-versastacks` `xq-ios-act-cli` and renamed. Assumes the DeviceKit runner is already installed by the agent host environment.
+_Avoid_: xq-ios-act (old name); agent-device (different stack); install-DeviceKit CLI
 
 **DeviceKit**:
-On-device XCUITest JSON-RPC runtime (`devicekit-ios`) that `xq-motest` drives. Not the Callstack AgentDeviceRunner.
-_Avoid_: agent-device helper, MobileCLI (optional; xq-motest installs DeviceKit itself)
+On-device XCUITest JSON-RPC runtime (`devicekit-ios`) that `xq-motest` drives. Not the Callstack AgentDeviceRunner. The runner (`.app` / `.ipa`) is provided and installed by infra before `xq-motest` runs.
+_Avoid_: agent-device helper; MobileCLI; “CLI installs DeviceKit”
+
+**DeviceKitRuntime**:
+The Motest module responsible for “is DeviceKit ready for this Session?” — health and start of an already-installed runner. Not install or resign.
+_Avoid_: ShellScripts, ModulePaths for DeviceKit, devicekit install
+
+**Session**:
+One agent-driven interaction with DeviceKit through `xq-motest` (map, act, assert loop against an app under test).
+_Avoid_: daemon session (agent-device); vague “connection”
+
+**CommandRunner**:
+The Motest module that is the Session command surface — every mutation/query agents need goes through it; the executable only parses argv and maps errors.
+_Avoid_: MotestCommand as the place business logic lives
 
 **agent-device**:
 Upstream Callstack CLI (CLI → daemon → native helper). Still available via skill `xq-mobile-auto-test` for comparison / optional use; not the primary XQ motest path.

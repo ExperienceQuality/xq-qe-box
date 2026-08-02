@@ -1,6 +1,7 @@
 import Foundation
 
-enum BundleIDDetect {
+/// Locate an already-installed DeviceKit runner on sim/device (infra installs it).
+enum RunnerDiscover {
     static func findSimRunner(udid: String) throws -> String {
         let output = try runCommand("/usr/bin/xcrun", arguments: ["simctl", "listapps", udid])
         guard let data = output.data(using: .utf8),
@@ -11,7 +12,10 @@ enum BundleIDDetect {
         if let bundleID = apps.keys.first(where: { $0.hasSuffix(suffix) }) {
             return bundleID
         }
-        throw CLIError.runtime("DeviceKit runner not found on simulator", hint: "xq-motest devicekit install --sim")
+        throw CLIError.runtime(
+            "DeviceKit runner not found on simulator",
+            hint: DeviceKitRuntime.infraHint(sim: true)
+        )
     }
 
     static func findDeviceRunner(udid: String) throws -> String {
@@ -42,8 +46,8 @@ enum BundleIDDetect {
         }
 
         throw CLIError.runtime(
-            "agent installed but bundle id not found",
-            hint: "xq-motest devicekit status --device \(udid)"
+            "DeviceKit runner not found on device",
+            hint: DeviceKitRuntime.infraHint(sim: false)
         )
     }
 

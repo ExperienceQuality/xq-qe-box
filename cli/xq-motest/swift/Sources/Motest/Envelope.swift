@@ -6,6 +6,7 @@ public enum ErrorKind: String, Sendable {
     case rpc
     case `internal`
     case runtime
+    case timeout
 }
 
 public enum ResponseTier: Sendable {
@@ -56,6 +57,20 @@ public struct CLIError: Error, Sendable {
 
     public static func runtime(_ message: String, hint: String, command: String? = nil) -> CLIError {
         CLIError(kind: .runtime, message: message, hint: hint, exitCode: ExitCodes.runtime, command: command)
+    }
+
+    public static func timeout(
+        _ message: String,
+        hint: String = "raise --timeout / XQ_MOTEST_TIMEOUT, or check DeviceKit is responding",
+        command: String? = nil
+    ) -> CLIError {
+        CLIError(kind: .timeout, message: message, hint: hint, exitCode: ExitCodes.timeout, command: command)
+    }
+
+    /// Map any thrown error into CLIError for the executable edge.
+    public static func wrapping(_ error: Error, command: String? = nil) -> CLIError {
+        if let cli = error as? CLIError { return cli }
+        return .internal(String(describing: error), command: command)
     }
 }
 
@@ -112,54 +127,11 @@ public enum Envelope {
         return String(decoding: data, as: UTF8.self)
     }
 
-    public static func emitActionOK(pretty: Bool) -> Never {
-        if pretty {
-            print("ok")
-        } else {
-            print(actionOK)
-        }
-        exit(ExitCodes.success)
-    }
-
-    public static func emitFailure(_ error: CLIError, pretty: Bool) -> Never {
-        if pretty {
-            fputs("error: \(error.message)\n", stderr)
-            fputs("hint: \(error.hint)\n", stderr)
-        } else {
-            let envelope = failure(
-                command: error.command,
-                kind: error.kind,
-                message: error.message,
-                hint: error.hint,
-                exitCode: error.exitCode
-            )
-            if let json = try? compactJSON(envelope) {
-                print(json)
-            }
-        }
-        exit(error.exitCode)
-    }
-
-    public static func emit(
-        _ envelope: [String: JSONValue]?,
-        pretty: Bool,
-        tier: ResponseTier
-    ) -> Never {
-        if tier == .action, envelope == nil {
-            emitActionOK(pretty: pretty)
-        }
-        guard let envelope else {
-            emitFailure(.internal("data tier requires an envelope"), pretty: pretty)
-        }
-        if pretty {
-            let data = try! JSONSerialization.data(
-                withJSONObject: envelope.mapValues(\.foundationValue),
-                options: [.prettyPrinted, .sortedKeys]
-            )
-            print(String(decoding: data, as: UTF8.self))
-        } else if let json = try? compactJSON(envelope) {
-            print(json)
-        }
-        exit(ExitCodes.success)
+    public static func prettyJSON(_ object: [String: JSONValue]) throws -> String {
+        let data = try JSONSerialization.data(
+            withJSONObject: object.mapValues(\.foundationValue),
+            options: [.prettyPrinted, .sortedKeys]
+        )
+        return String(decoding: data, as: UTF8.self)
     }
 }

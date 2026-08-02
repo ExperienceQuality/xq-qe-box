@@ -6,7 +6,7 @@ struct GlobalOptions: ParsableArguments {
     @Option(name: .long, help: "DeviceKit HTTP base URL")
     var baseURL: String?
 
-    @Option(name: .long, help: "Timeout in seconds")
+    @Option(name: .long, help: "Timeout in seconds for RPC, health, and ensure")
     var timeout: Double?
 
     @Flag(name: .long, help: "Pretty stdout")
@@ -64,9 +64,9 @@ struct Health: AsyncParsableCommand {
         let transport = WSJSONRPCTransport(config: config)
         do {
             let envelope = try await CommandRunner.health(config: config, transport: transport)
-            Envelope.emit(envelope, pretty: config.pretty, tier: .data)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "health")
         }
     }
 }
@@ -83,9 +83,9 @@ struct Map: AsyncParsableCommand {
         let transport = WSJSONRPCTransport(config: config)
         do {
             let envelope = try await CommandRunner.map(config: config, transport: transport, includeRaw: includeRaw)
-            Envelope.emit(envelope, pretty: config.pretty, tier: .data)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "map")
         }
     }
 }
@@ -106,9 +106,9 @@ struct DiffMap: ParsableCommand {
         let config = globals.makeConfig()
         do {
             let envelope = try CommandRunner.diffMap(config: config)
-            Envelope.emit(envelope, pretty: config.pretty, tier: .data)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "diff.map")
         }
     }
 }
@@ -142,16 +142,16 @@ struct Tap: AsyncParsableCommand {
         } else if let second, let px = Int(first), let py = Int(second) {
             parsedRef = nil; parsedX = px; parsedY = py
         } else {
-            Envelope.emitFailure(
-                .usage("tap requires @eN or X Y coordinates", hint: "xq-motest tap @e3", command: "tap"),
+            CLIEmit.emitFailure(
+                CLIError.usage("tap requires @eN or X Y coordinates", hint: "xq-motest tap @e3", command: "tap"),
                 pretty: config.pretty
             )
         }
         do {
             try await CommandRunner.tap(config: config, transport: transport, ref: parsedRef, x: parsedX, y: parsedY)
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "tap")
         }
     }
 }
@@ -184,9 +184,9 @@ struct TypeText: AsyncParsableCommand {
         }
         do {
             try await CommandRunner.type(config: config, transport: transport, text: text, ref: parsedRef)
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "type")
         }
     }
 }
@@ -212,9 +212,9 @@ struct Screenshot: AsyncParsableCommand {
             let url = URL(fileURLWithPath: path)
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try bytes.write(to: url)
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "screenshot")
         }
     }
 
@@ -245,9 +245,9 @@ struct Launch: AsyncParsableCommand {
         let transport = WSJSONRPCTransport(config: config)
         do {
             try await CommandRunner.launch(config: config, transport: transport, bundleID: bundleID)
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "launch")
         }
     }
 }
@@ -267,9 +267,9 @@ struct Foreground: AsyncParsableCommand {
                 method: "device.apps.foreground",
                 params: .object([:])
             )
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "foreground")
         }
     }
 }
@@ -284,9 +284,9 @@ struct Dump: AsyncParsableCommand {
         let transport = WSJSONRPCTransport(config: config)
         do {
             let envelope = try await CommandRunner.dump(config: config, transport: transport)
-            Envelope.emit(envelope, pretty: config.pretty, tier: .data)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "dump")
         }
     }
 }
@@ -310,87 +310,26 @@ struct Rpc: AsyncParsableCommand {
                 method: method,
                 paramsJSON: params
             )
-            Envelope.emit(envelope, pretty: config.pretty, tier: .data)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "rpc")
         }
     }
 }
 
-struct DeviceKitCommand: ParsableCommand {
+struct DeviceKitCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "devicekit",
-        abstract: "DeviceKit agent lifecycle",
-        subcommands: [InstallCommand.self, StartCommand.self, StatusCommand.self]
+        abstract: "DeviceKit runtime (assumes runner preinstalled by infra)",
+        subcommands: [StartCommand.self, StatusCommand.self]
     )
 }
 
-struct InstallCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "install", abstract: "Install DeviceKit runner")
-
-    @OptionGroup var globals: GlobalOptions
-    @Flag(name: .long, help: "Install on booted simulator")
-    var sim = false
-    @Option(name: .long, help: "Device UDID")
-    var device: String?
-    @Option(name: .long, help: "Provisioning profile for real device")
-    var provisioningProfile: String?
-    @Option(name: .long, help: "Codesign identity override")
-    var signingIdentity: String?
-    @Flag(name: .long, help: "Force reinstall")
-    var force = false
-    @Option(name: .long, help: "Pinned release version")
-    var version: String?
-    @Option(name: .long, help: "Local unsigned IPA path")
-    var ipa: String?
-
-    mutating func run() throws {
-        let config = globals.makeConfig()
-        do {
-            if sim {
-                guard let udid = device ?? config.deviceID ?? ProcessInfo.processInfo.environment["XQ_MOTEST_DEVICE"] else {
-                    throw CLIError.usage(
-                        "devicekit install --sim requires booted simulator UDID via --device",
-                        hint: "xq-motest devicekit install --sim --device <UDID>"
-                    )
-                }
-                try AgentLifecycle.installSim(
-                    config: config,
-                    udid: udid,
-                    version: version ?? "0.0.20",
-                    force: force
-                )
-            } else {
-                guard let udid = device else {
-                    throw CLIError.usage(
-                        "devicekit install requires --sim or --device UDID",
-                        hint: "xq-motest devicekit install --sim"
-                    )
-                }
-                guard let provisioningProfile else {
-                    throw CLIError.usage(
-                        "Missing provisioning profile for device install",
-                        hint: "xq-motest devicekit install --device UDID --provisioning-profile PATH"
-                    )
-                }
-                try AgentLifecycle.installDevice(
-                    config: config,
-                    udid: udid,
-                    provisioningProfile: provisioningProfile,
-                    signingIdentity: signingIdentity,
-                    version: version ?? "0.0.20",
-                    ipaPath: ipa
-                )
-            }
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
-        }
-    }
-}
-
-struct StartCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "start", abstract: "Start DeviceKit runner")
+struct StartCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "start",
+        abstract: "Start an already-installed DeviceKit runner"
+    )
 
     @OptionGroup var globals: GlobalOptions
     @Flag(name: .long, help: "Start on simulator")
@@ -398,27 +337,30 @@ struct StartCommand: ParsableCommand {
     @Option(name: .long, help: "Device UDID")
     var device: String?
 
-    mutating func run() throws {
+    mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            try AgentLifecycle.start(config: config, sim: sim, deviceID: device)
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
+            try await DeviceKitRuntime.start(config: config, sim: sim, deviceID: device)
+            CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
+        } catch {
+            CLIEmit.emitFailure(error, pretty: config.pretty, command: "devicekit.start")
         }
     }
 }
 
-struct StatusCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "status", abstract: "DeviceKit install/runtime status")
+struct StatusCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "status",
+        abstract: "DeviceKit runtime status"
+    )
 
     @OptionGroup var globals: GlobalOptions
     @Option(name: .long, help: "Device UDID")
     var device: String?
 
-    mutating func run() throws {
+    mutating func run() async throws {
         let config = globals.makeConfig()
-        let status = AgentLifecycle.status(config: config, device: device)
+        let status = await DeviceKitRuntime.status(config: config, device: device)
         let result: JSONValue = .object([
             "installed": .bool(status.installed),
             "bundle_id": status.bundleID.map(JSONValue.string) ?? .null,
@@ -433,6 +375,6 @@ struct StatusCommand: ParsableCommand {
             result: result,
             baseURL: config.baseURL
         )
-        Envelope.emit(envelope, pretty: config.pretty, tier: .data)
+        CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
     }
 }
