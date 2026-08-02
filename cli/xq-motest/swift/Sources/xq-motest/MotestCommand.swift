@@ -21,6 +21,12 @@ struct GlobalOptions: ParsableArguments {
     @Option(name: .long, help: "Device UDID override")
     var device: String?
 
+    @Option(
+        name: .customLong("products-dir"),
+        help: "DeviceKit build-for-testing Products dir (.xctestrun + Release-iphoneos); env XQ_MOTEST_DEVICEKIT_PRODUCTS"
+    )
+    var productsDir: String?
+
     func makeConfig() -> Config {
         Config.fromEnvironment(
             baseURL: baseURL,
@@ -28,7 +34,8 @@ struct GlobalOptions: ParsableArguments {
             pretty: pretty,
             ensureRuntime: ensureRuntime,
             stateDir: stateDir.map { URL(fileURLWithPath: $0, isDirectory: true) },
-            deviceID: device
+            deviceID: device,
+            productsDir: productsDir.map { URL(fileURLWithPath: $0, isDirectory: true) }
         )
     }
 }
@@ -298,11 +305,20 @@ struct StartCommand: AsyncParsableCommand {
     var sim = false
     @Option(name: .long, help: "Device UDID")
     var device: String?
+    @Option(
+        name: .customLong("products-dir"),
+        help: "Products dir for real-device xcodebuild (overrides global / env)"
+    )
+    var productsDir: String?
 
     mutating func run() async throws {
-        let config = globals.makeConfig()
+        var config = globals.makeConfig()
+        if let device { config.deviceID = device }
+        if let productsDir {
+            config.productsDir = URL(fileURLWithPath: productsDir, isDirectory: true)
+        }
         do {
-            try await CommandRunner.devicekitStart(config: config, sim: sim, deviceID: device)
+            try await CommandRunner.devicekitStart(config: config, sim: sim, deviceID: device ?? config.deviceID)
             CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "devicekit.start")

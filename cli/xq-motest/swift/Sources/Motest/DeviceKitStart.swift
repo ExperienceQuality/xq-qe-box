@@ -18,6 +18,7 @@ enum DeviceKitStart {
         // Modern simctl has no --env; child env vars use SIMCTL_CHILD_<NAME>.
         var env = ProcessInfo.processInfo.environment
         env["SIMCTL_CHILD_DEVICEKIT_LISTEN_PORT"] = String(port)
+        env["SIMCTL_CHILD_DEVICEKIT_LISTEN_HOST"] = "127.0.0.1"
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
@@ -36,10 +37,17 @@ enum DeviceKitStart {
             throw CLIError.runtime(message.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
         }
 
-        try await DeviceKitRuntime.waitUntilHealthy(port: port, timeoutSec: min(30, config.timeoutSec))
+        try await DeviceKitRuntime.waitUntilHealthy(
+            config: config,
+            timeoutSec: min(30, config.timeoutSec)
+        )
         try writeStartedJSON(config: config, udid: udid, bundleID: bundleID, port: port, mode: "sim")
     }
 
+    /// Apple-only real-device start: `xcodebuild test-without-building` against a
+    /// same-build products sidecar (`.xctestrun` + `Release-iphoneos`), not go-ios.
+    /// IPA install remains infra-owned (ADR-0001). Caller must set `config.baseURL`
+    /// to a reachable DeviceKit URL (device Wi‑Fi IP) when not using localhost forward.
     static func startDevice(
         config: Config,
         udid: String,
@@ -53,10 +61,17 @@ enum DeviceKitStart {
             )
         }
 
-        let xctestrun = config.stateDir.appendingPathComponent("devicekit.xctestrun")
-        try XCTestRun.writeDeviceRunner(at: xctestrun, bundleID: bundleID, port: port)
+        guard let productsDir = config.productsDir else {
+            throw CLIError.runtime(
+                "real-device start requires DeviceKit products directory",
+                hint: "pass --products-dir /path/to/Products (or XQ_MOTEST_DEVICEKIT_PRODUCTS) containing .xctestrun + Release-iphoneos from the same build as the IPA"
+            )
+        }
+
+        let xctestrun = try XCTestRun.prepareProductsRunner(productsDir: productsDir, port: port)
 
         let logFile = config.stateDir.appendingPathComponent("xcodebuild-start.log")
+        try FileManager.default.createDirectory(at: config.stateDir, withIntermediateDirectories: true)
         FileManager.default.createFile(atPath: logFile.path, contents: nil)
         let logHandle = try FileHandle(forWritingTo: logFile)
 
@@ -75,7 +90,7 @@ enum DeviceKitStart {
 
         do {
             try await DeviceKitRuntime.waitUntilHealthy(
-                port: port,
+                config: config,
                 timeoutSec: max(90, config.timeoutSec),
                 logHint: logFile.path
             )
@@ -114,14 +129,17 @@ enum DeviceKitStart {
         mode: String
     ) throws {
         try FileManager.default.createDirectory(at: config.stateDir, withIntermediateDirectories: true)
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "deviceId": udid,
             "bundleId": bundleID,
             "forwardPort": port,
-            "baseUrl": "http://127.0.0.1:\(port)",
+            "baseUrl": config.baseURL,
             "started": true,
             "mode": mode,
         ]
+        if let productsDir = config.productsDir {
+            payload["productsDir"] = productsDir.path
+        }
         let data = try JSONSerialization.data(withJSONObject: payload, options: [])
         try data.write(to: config.stateDir.appendingPathComponent("device.json"))
     }

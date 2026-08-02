@@ -36,9 +36,9 @@ xq-motest map                    # refresh refs after tap
 | Target | Infra | CLI start |
 | --- | --- | --- |
 | Simulator | Install DeviceKit `.app` on sim | `devicekit start --sim --device UDID` |
-| Real device | Install signed DeviceKit `.ipa` on device | `devicekit start --device UDID` |
+| Real device | Install signed DeviceKit `.ipa` on device + host **Products** sidecar | `devicekit start --device UDID --products-dir <Products> --base-url http://<device-ip>:12004` |
 
-Start uses `simctl launch` (sim) or `xcodebuild test-without-building` (device).
+Start uses `simctl launch` (sim) or `xcodebuild test-without-building` against products `.xctestrun` (device). No go-ios.
 
 ## Troubleshooting
 

@@ -27,7 +27,7 @@ public enum DeviceKitRuntime {
             deviceID: config.deviceID ?? snapshot.deviceID
         )
         try await waitUntilHealthy(
-            port: config.listenPort(),
+            config: config,
             timeoutSec: config.timeoutSec
         )
     }
@@ -91,12 +91,12 @@ public enum DeviceKitRuntime {
     }
 
     public static func waitUntilHealthy(
-        port: Int,
+        config: Config,
         timeoutSec: TimeInterval,
         logHint: String? = nil
     ) async throws {
-        guard let url = URL(string: "http://127.0.0.1:\(port)/health") else {
-            throw CLIError.runtime("invalid health URL", hint: "")
+        guard let url = config.healthURL() else {
+            throw CLIError.runtime("invalid health URL from baseURL \(config.baseURL)", hint: "")
         }
         let deadline = ContinuousClock.now + .seconds(max(Int(timeoutSec), 1))
         var lastError = ""
@@ -119,20 +119,31 @@ public enum DeviceKitRuntime {
             }
             try await Task.sleep(nanoseconds: 1_000_000_000)
         }
-        var message = "DeviceKit health check timed out"
+        var message = "DeviceKit health check timed out at \(url.absoluteString)"
         if let logHint { message += ". See \(logHint)" }
         if !lastError.isEmpty { message += " (last error: \(lastError))" }
         throw CLIError.timeout(
             message,
-            hint: "ensure DeviceKit runner is installed by infra, then: xq-motest devicekit start [--sim] --device <UDID>"
+            hint: infraHint(sim: false) + "; for physical devices set --base-url http://<device-wifi-ip>:12004"
         )
+    }
+
+    /// Back-compat helper used by older call sites/tests.
+    public static func waitUntilHealthy(
+        port: Int,
+        timeoutSec: TimeInterval,
+        logHint: String? = nil
+    ) async throws {
+        var config = Config(baseURL: "http://127.0.0.1:\(port)")
+        config.timeoutSec = timeoutSec
+        try await waitUntilHealthy(config: config, timeoutSec: timeoutSec, logHint: logHint)
     }
 
     static func infraHint(sim: Bool) -> String {
         if sim {
             return "install DeviceKit runner (.app) on the simulator via agent-host infra, then: xq-motest devicekit start --sim --device <UDID>"
         }
-        return "install DeviceKit runner (.ipa) on the device via agent-host infra, then: xq-motest devicekit start --device <UDID>"
+        return "install DeviceKit IPA via infra; provide --products-dir (same-build Products); then: xq-motest devicekit start --device <UDID> --products-dir <Products> --base-url http://<device-ip>:12004"
     }
 
     private struct Snapshot {
