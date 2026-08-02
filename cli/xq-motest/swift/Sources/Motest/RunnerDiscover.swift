@@ -4,8 +4,11 @@ import Foundation
 enum RunnerDiscover {
     static func findSimRunner(udid: String) throws -> String {
         let output = try runCommand("/usr/bin/xcrun", arguments: ["simctl", "listapps", udid])
+        // simctl listapps emits OpenStep/NeXTSTEP plist text, not JSON.
         guard let data = output.data(using: .utf8),
-              let apps = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+              let apps = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil))
+                as? [String: Any]
+        else {
             throw CLIError.runtime("failed to parse simctl listapps output", hint: "")
         }
         let suffix = DeviceKitConstants.runnerBundleSuffix

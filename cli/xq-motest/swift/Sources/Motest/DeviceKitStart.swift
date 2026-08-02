@@ -15,13 +15,18 @@ enum DeviceKitStart {
             )
         }
 
+        // Modern simctl has no --env; child env vars use SIMCTL_CHILD_<NAME>.
+        var env = ProcessInfo.processInfo.environment
+        env["SIMCTL_CHILD_DEVICEKIT_LISTEN_PORT"] = String(port)
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
         process.arguments = [
             "simctl", "launch",
-            "--env", "DEVICEKIT_LISTEN_PORT=\(port)",
+            "--terminate-running-process",
             udid, bundleID,
         ]
+        process.environment = env
         let stderr = Pipe()
         process.standardError = stderr
         try process.run()
