@@ -42,6 +42,10 @@ _Avoid_: Duplicating full manuals when CLI `--help` / README suffice
 Skill that installs/routs **agent-device** (separate from `xq-motest`).
 _Avoid_: Using this skill when the task is the DeviceKit/`xq-motest` path
 
+**quality-\*** (skills):
+Agent Skills under `skills/quality-*/` that enforce Hub org testing standards (sizes, hermeticity, spot coverage). Docs are vendored in each skill’s `references/`. Install with `gh skill install ExperienceQuality/xq-qe-box quality-…`. Editorial source: Hub [`quality/`](https://github.com/ExperienceQuality/xq-hub/tree/main/quality).
+_Avoid_: Satellite-local `docs/quality/` binders; curling Hub at runtime for these docs
+
 **Skill**:
-A folder under `skills/<name>/` with `SKILL.md` (Agent Skills format) and optional `scripts/`. Validated with `gh skill publish --dry-run`.
+A folder under `skills/<name>/` with `SKILL.md` (Agent Skills format) and optional `scripts/` / `references/`. Validated with `gh skill publish --dry-run`.
 _Avoid_: Full command cookbooks in SKILL.md when the CLI owns the contract
