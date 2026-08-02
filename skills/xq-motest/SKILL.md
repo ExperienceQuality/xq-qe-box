@@ -64,7 +64,7 @@ Read [agent loop](references/agent-loop.md) for response tiers, env vars, and re
 ### Inspect
 
 - `xq-motest dump` — raw `device.dump.ui` (data tier)
-- `xq-motest rpc --method device.info` — escape hatch (data tier)
+- `xq-motest rpc device.info` — escape hatch (data tier)
 - `xq-motest screenshot /tmp/screen.png` — action tier; file on disk, stdout `{"ok":true}`
 
 ### Lifecycle only
