@@ -7,7 +7,7 @@ public enum KitCall {
         method: String,
         params: JSONValue? = nil
     ) async throws -> (JSONValue, Int) {
-        try DeviceKitRuntime.ensure(config: config)
+        try await DeviceKitRuntime.ensure(config: config)
         let started = Date()
         let response = try await transport.call(method: method, params: params, rpcID: 1)
         if let error = response.error {
@@ -23,7 +23,7 @@ public enum KitCall {
         method: String,
         params: JSONValue? = nil
     ) async throws {
-        try DeviceKitRuntime.ensure(config: config)
+        try await DeviceKitRuntime.ensure(config: config)
         try await transport.callAction(method: method, params: params, rpcID: 1)
     }
 }

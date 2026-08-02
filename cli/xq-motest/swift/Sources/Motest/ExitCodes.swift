@@ -5,4 +5,5 @@ public enum ExitCodes {
     public static let rpc: Int32 = 4
     public static let `internal`: Int32 = 5
     public static let runtime: Int32 = 6
+    public static let timeout: Int32 = 7
 }

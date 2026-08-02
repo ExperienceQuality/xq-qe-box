@@ -146,14 +146,26 @@ public final class WSJSONRPCTransport: KitTransport, @unchecked Sendable {
     }
 
     public func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
+        try await Timeout.run(seconds: config.timeoutSec) {
+            try await self.callUnbounded(method: method, params: params, rpcID: rpcID)
+        }
+    }
+
+    private func callUnbounded(method: String, params: JSONValue?, rpcID: Int) async throws -> JSONRPCResponse {
         guard let url = config.wsURL() else {
             throw CLIError.transport("invalid base URL")
         }
         let requestText = try WSCodec.encodeRequest(method: method, params: params, rpcID: rpcID)
-        let session = URLSession(configuration: .default)
+        let sessionConfig = URLSessionConfiguration.default
+        sessionConfig.timeoutIntervalForRequest = config.timeoutSec
+        sessionConfig.timeoutIntervalForResource = config.timeoutSec
+        let session = URLSession(configuration: sessionConfig)
         let task = session.webSocketTask(with: url)
         task.resume()
-        defer { task.cancel(with: .goingAway, reason: nil) }
+        defer {
+            task.cancel(with: .goingAway, reason: nil)
+            session.invalidateAndCancel()
+        }
         try await task.send(.string(requestText))
         let message = try await task.receive()
         let raw: String

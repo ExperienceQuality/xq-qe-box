@@ -27,7 +27,7 @@ xq-motest map                    # refresh refs after tap
 | Variable | Default |
 | --- | --- |
 | `XQ_MOTEST_BASE_URL` | `http://127.0.0.1:12004` |
-| `XQ_MOTEST_TIMEOUT` | `30` |
+| `XQ_MOTEST_TIMEOUT` | `30` (bounds WS RPC, health wait, ensure; CLI `--timeout`) |
 | `XQ_MOTEST_STATE_DIR` | `~/.xq-motest` |
 | `XQ_MOTEST_DEVICE` | _(optional UDID)_ |
 

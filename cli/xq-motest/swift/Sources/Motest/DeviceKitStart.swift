@@ -6,7 +6,7 @@ enum DeviceKitStart {
         udid: String,
         bundleID: String,
         port: Int
-    ) throws {
+    ) async throws {
         let state = try simulatorState(udid: udid)
         guard state == "Booted" else {
             throw CLIError.runtime(
@@ -31,7 +31,7 @@ enum DeviceKitStart {
             throw CLIError.runtime(message.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
         }
 
-        try DeviceKitRuntime.waitUntilHealthy(port: port, timeoutSec: 30)
+        try await DeviceKitRuntime.waitUntilHealthy(port: port, timeoutSec: min(30, config.timeoutSec))
         try writeStartedJSON(config: config, udid: udid, bundleID: bundleID, port: port, mode: "sim")
     }
 
@@ -40,7 +40,7 @@ enum DeviceKitStart {
         udid: String,
         bundleID: String,
         port: Int
-    ) throws {
+    ) async throws {
         guard FileManager.default.fileExists(atPath: "/usr/bin/xcrun") else {
             throw CLIError.runtime(
                 "real-device start requires Xcode (xcodebuild)",
@@ -69,9 +69,9 @@ enum DeviceKitStart {
         try process.run()
 
         do {
-            try DeviceKitRuntime.waitUntilHealthy(
+            try await DeviceKitRuntime.waitUntilHealthy(
                 port: port,
-                timeoutSec: 90,
+                timeoutSec: max(90, config.timeoutSec),
                 logHint: logFile.path
             )
         } catch {

@@ -2,17 +2,17 @@ import XCTest
 @testable import Motest
 
 final class DeviceKitRuntimeTests: XCTestCase {
-    func testDisabledIsNoOp() throws {
+    func testDisabledIsNoOp() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("xq-motest-runtime-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let config = Config(ensureRuntime: false, stateDir: dir)
-        XCTAssertNoThrow(try DeviceKitRuntime.ensure(config: config))
+        try await DeviceKitRuntime.ensure(config: config)
     }
 
-    func testMissingRunnerFailsWithInfraHint() {
+    func testMissingRunnerFailsWithInfraHint() async {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("xq-motest-runtime-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -20,7 +20,7 @@ final class DeviceKitRuntimeTests: XCTestCase {
 
         let config = Config(ensureRuntime: true, stateDir: dir)
         do {
-            try DeviceKitRuntime.ensure(config: config)
+            try await DeviceKitRuntime.ensure(config: config)
             XCTFail("expected runtime error")
         } catch let error as CLIError {
             XCTAssertEqual(error.exitCode, ExitCodes.runtime)

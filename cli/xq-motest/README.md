@@ -52,7 +52,7 @@ xq-motest diff map
 | Variable | Purpose |
 | --- | --- |
 | `XQ_MOTEST_BASE_URL` | DeviceKit HTTP base (default `http://127.0.0.1:12004`) |
-| `XQ_MOTEST_TIMEOUT` | Timeout in seconds |
+| `XQ_MOTEST_TIMEOUT` | Bound for WebSocket RPC, health waits, and ensure (seconds; also `--timeout`) |
 | `XQ_MOTEST_STATE_DIR` | State directory (default `~/.xq-motest`) |
 | `XQ_MOTEST_DEVICE` | UDID override |
 
