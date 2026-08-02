@@ -1,7 +1,7 @@
 import Foundation
 
-public enum DiffMap {
-    public static func refLine(ref: String, entry: [String: JSONValue]) -> String {
+enum DiffMap {
+    static func refLine(ref: String, entry: [String: JSONValue]) -> String {
         let role = entry["role"]?.stringValue ?? "element"
         let label = entry["label"]?.stringValue ?? ""
         if label.isEmpty {
@@ -10,7 +10,7 @@ public enum DiffMap {
         return "\(ref) [\(role)] \"\(label)\""
     }
 
-    public static func summarize(_ document: MapDocument) -> [String] {
+    static func summarize(_ document: MapDocument) -> [String] {
         document.refs.keys.sorted {
             let lhs = Int($0.dropFirst(2)) ?? 0
             let rhs = Int($1.dropFirst(2)) ?? 0
@@ -18,7 +18,7 @@ public enum DiffMap {
         }.map { refLine(ref: $0, entry: document.refs[$0]?.objectValue ?? [:]) }
     }
 
-    public static func diff(previous: MapDocument, current: MapDocument) -> [String: JSONValue] {
+    static func diff(previous: MapDocument, current: MapDocument) -> [String: JSONValue] {
         let previousLines = Set(summarize(previous))
         let currentLines = Set(summarize(current))
         let added = currentLines.subtracting(previousLines).sorted()

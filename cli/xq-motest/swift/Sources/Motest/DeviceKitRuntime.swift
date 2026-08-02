@@ -2,20 +2,20 @@ import Foundation
 
 /// Ready-check and start for an already-installed DeviceKit runner.
 /// Install/resign are owned by agent-host infra (ADR-0001).
-public enum DeviceKitRuntime {
-    public struct Status: Sendable {
-        public var installed: Bool
-        public var bundleID: String?
-        public var version: String?
-        public var serverReachable: Bool
-        public var baseURL: String
-        public var deviceID: String?
-        public var mode: String?
+enum DeviceKitRuntime {
+    struct Status: Sendable {
+        var installed: Bool
+        var bundleID: String?
+        var version: String?
+        var serverReachable: Bool
+        var baseURL: String
+        var deviceID: String?
+        var mode: String?
     }
 
     /// When `config.ensureRuntime` is true, ensure DeviceKit responds on `/health`.
     /// Starts an already-installed runner when the server is down.
-    public static func ensure(config: Config) async throws {
+    static func ensure(config: Config) async throws {
         guard config.ensureRuntime else { return }
         if await isReachable(config: config) { return }
 
@@ -32,7 +32,7 @@ public enum DeviceKitRuntime {
         )
     }
 
-    public static func start(config: Config, sim: Bool, deviceID: String?) async throws {
+    static func start(config: Config, sim: Bool, deviceID: String?) async throws {
         let stored = (try? loadDeviceJSON(config: config)) ?? [:]
         let udid = deviceID
             ?? stored["deviceId"] as? String
@@ -40,7 +40,7 @@ public enum DeviceKitRuntime {
             ?? ProcessInfo.processInfo.environment["XQ_MOTEST_DEVICE"]
             ?? ""
         guard !udid.isEmpty else {
-            throw CLIError.runtime(
+            throw MotestError.runtime(
                 "DeviceKit start requires a device UDID",
                 hint: infraHint(sim: sim)
             )
@@ -64,7 +64,7 @@ public enum DeviceKitRuntime {
         }
     }
 
-    public static func status(config: Config, device: String? = nil) async -> Status {
+    static func status(config: Config, device: String? = nil) async -> Status {
         let snapshot = statusSnapshot(config: config, device: device)
         return Status(
             installed: snapshot.installed,
@@ -77,7 +77,7 @@ public enum DeviceKitRuntime {
         )
     }
 
-    public static func isReachable(config: Config) async -> Bool {
+    static func isReachable(config: Config) async -> Bool {
         guard let url = config.healthURL() else { return false }
         var request = URLRequest(url: url)
         request.timeoutInterval = min(2, max(config.timeoutSec, 0.5))
@@ -90,19 +90,19 @@ public enum DeviceKitRuntime {
         }
     }
 
-    public static func waitUntilHealthy(
+    static func waitUntilHealthy(
         port: Int,
         timeoutSec: TimeInterval,
         logHint: String? = nil
     ) async throws {
         guard let url = URL(string: "http://127.0.0.1:\(port)/health") else {
-            throw CLIError.runtime("invalid health URL", hint: "")
+            throw MotestError.runtime("invalid health URL", hint: "")
         }
         let deadline = ContinuousClock.now + .seconds(max(Int(timeoutSec), 1))
         var lastError = ""
         while ContinuousClock.now < deadline {
             if Task.isCancelled {
-                throw CLIError.timeout("health wait cancelled")
+                throw MotestError.timeout("health wait cancelled")
             }
             var request = URLRequest(url: url)
             request.timeoutInterval = 2
@@ -122,7 +122,7 @@ public enum DeviceKitRuntime {
         var message = "DeviceKit health check timed out"
         if let logHint { message += ". See \(logHint)" }
         if !lastError.isEmpty { message += " (last error: \(lastError))" }
-        throw CLIError.timeout(
+        throw MotestError.timeout(
             message,
             hint: "ensure DeviceKit runner is installed by infra, then: xq-motest devicekit start [--sim] --device <UDID>"
         )

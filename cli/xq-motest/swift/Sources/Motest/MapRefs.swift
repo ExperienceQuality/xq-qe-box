@@ -1,11 +1,11 @@
 import Foundation
 
-public enum MapRefs {
+enum MapRefs {
     private static let actionableRoles: Set<String> = [
         "button", "link", "switch", "textfield", "text field", "securetextfield",
     ]
 
-    public static func assign(_ raw: JSONValue) -> (refs: [String: JSONValue], summary: [String: JSONValue]) {
+    static func assign(_ raw: JSONValue) -> (refs: [String: JSONValue], summary: [String: JSONValue]) {
         var refs: [String: JSONValue] = [:]
         var index = 1
 

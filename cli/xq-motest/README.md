@@ -58,11 +58,25 @@ xq-motest diff map
 
 `--no-ensure-runtime` disables auto-start before RPC verbs (default: auto-start via DeviceKitRuntime when `/health` is down).
 
+## Motest library public surface
+
+The `Motest` SPM target exposes a small Session façade. Prefer these types from outside the package:
+
+| Type | Role |
+| --- | --- |
+| `CommandRunner` | Session verbs (`health`, `map`, `tap`, …) — throws `MotestError` |
+| `Config` | Env / flag configuration |
+| `MotestError` · `ErrorKind` · `ExitCodes` | Typed failures (no `exit` in the library) |
+| `Envelope` · `ResponseTier` · `JSONValue` | Agent JSON builders (exe maps to stdout via `CLIEmit`) |
+
+Helpers (`DeviceKitRuntime`, `KitTransport`, `MapStore`, …) are **internal**. Tests reach them with `@testable import Motest`. Process exit lives only in the `xq-motest` executable (`CLIEmit`).
+
 ## Verify
 
 ```bash
 bash cli/xq-motest/scripts/run-all.sh
 ```
+
 
 ## Agent skill
 

@@ -6,13 +6,13 @@ enum RunnerDiscover {
         let output = try runCommand("/usr/bin/xcrun", arguments: ["simctl", "listapps", udid])
         guard let data = output.data(using: .utf8),
               let apps = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw CLIError.runtime("failed to parse simctl listapps output", hint: "")
+            throw MotestError.runtime("failed to parse simctl listapps output", hint: "")
         }
         let suffix = DeviceKitConstants.runnerBundleSuffix
         if let bundleID = apps.keys.first(where: { $0.hasSuffix(suffix) }) {
             return bundleID
         }
-        throw CLIError.runtime(
+        throw MotestError.runtime(
             "DeviceKit runner not found on simulator",
             hint: DeviceKitRuntime.infraHint(sim: true)
         )
@@ -45,7 +45,7 @@ enum RunnerDiscover {
             }
         }
 
-        throw CLIError.runtime(
+        throw MotestError.runtime(
             "DeviceKit runner not found on device",
             hint: DeviceKitRuntime.infraHint(sim: false)
         )
@@ -82,7 +82,7 @@ enum RunnerDiscover {
         let out = String(decoding: stdout.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         guard process.terminationStatus == 0 || allowFailure else {
             let err = String(decoding: stderr.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            throw CLIError.runtime(err.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
+            throw MotestError.runtime(err.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
         }
         return out
     }

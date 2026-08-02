@@ -1,7 +1,7 @@
 import Foundation
 
-public enum KitCall {
-    public static func call(
+enum KitCall {
+    static func call(
         config: Config,
         transport: any KitTransport,
         method: String,
@@ -11,13 +11,13 @@ public enum KitCall {
         let started = Date()
         let response = try await transport.call(method: method, params: params, rpcID: 1)
         if let error = response.error {
-            throw CLIError.rpc(error.message, command: method)
+            throw MotestError.rpc(error.message, command: method)
         }
         let duration = Int(Date().timeIntervalSince(started) * 1000)
         return (response.result ?? .null, duration)
     }
 
-    public static func action(
+    static func action(
         config: Config,
         transport: any KitTransport,
         method: String,

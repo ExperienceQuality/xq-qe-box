@@ -60,7 +60,7 @@ public enum JSONValue: Equatable, Sendable {
 
     public static func decode(from string: String) throws -> JSONValue {
         guard let data = string.data(using: .utf8) else {
-            throw CLIError.internal("invalid UTF-8")
+            throw MotestError.internal("invalid UTF-8")
         }
         return try decode(from: data)
     }

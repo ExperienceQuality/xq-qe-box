@@ -1,30 +1,30 @@
 import Foundation
 
-public struct HealthResult: Sendable {
-    public let ok: Bool
-    public let statusCode: Int
-    public let durationMs: Int
+struct HealthResult: Sendable {
+    let ok: Bool
+    let statusCode: Int
+    let durationMs: Int
 }
 
-public struct JSONRPCError: Sendable {
-    public let code: Int
-    public let message: String
+struct JSONRPCError: Sendable {
+    let code: Int
+    let message: String
 }
 
-public struct JSONRPCResponse: Sendable {
-    public let result: JSONValue?
-    public let error: JSONRPCError?
-    public let id: Int
+struct JSONRPCResponse: Sendable {
+    let result: JSONValue?
+    let error: JSONRPCError?
+    let id: Int
 }
 
-public protocol KitTransport: Sendable {
+protocol KitTransport: Sendable {
     func fetchHealth() async throws -> HealthResult
     func call(method: String, params: JSONValue?, rpcID: Int) async throws -> JSONRPCResponse
     func callAction(method: String, params: JSONValue?, rpcID: Int) async throws
 }
 
-public enum WSCodec {
-    public static func encodeRequest(method: String, params: JSONValue?, rpcID: Int = 1) throws -> String {
+enum WSCodec {
+    static func encodeRequest(method: String, params: JSONValue?, rpcID: Int = 1) throws -> String {
         var payload: [String: Any] = [
             "jsonrpc": "2.0",
             "method": method,
@@ -37,10 +37,10 @@ public enum WSCodec {
         return String(decoding: data, as: UTF8.self)
     }
 
-    public static func decodeResponse(_ raw: String, rpcID: Int = 1) throws -> JSONRPCResponse {
+    static func decodeResponse(_ raw: String, rpcID: Int = 1) throws -> JSONRPCResponse {
         let data = Data(raw.utf8)
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw CLIError.internal("JSON-RPC response must be an object")
+            throw MotestError.internal("JSON-RPC response must be an object")
         }
         var error: JSONRPCError?
         if let err = object["error"] as? [String: Any] {
@@ -55,20 +55,20 @@ public enum WSCodec {
     }
 }
 
-public final class MockTransport: KitTransport, @unchecked Sendable {
-    public var healthOK: Bool
-    public var healthStatus: Int
-    public var healthDurationMs: Int
-    public var responses: [String: JSONRPCResponse]
-    public var raiseOnConnect: CLIError?
-    public private(set) var calls: [(String, JSONValue?)] = []
+final class MockTransport: KitTransport, @unchecked Sendable {
+    var healthOK: Bool
+    var healthStatus: Int
+    var healthDurationMs: Int
+    var responses: [String: JSONRPCResponse]
+    var raiseOnConnect: MotestError?
+    private(set) var calls: [(String, JSONValue?)] = []
 
-    public init(
+    init(
         healthOK: Bool = false,
         healthStatus: Int = 503,
         healthDurationMs: Int = 1,
         responses: [String: JSONRPCResponse] = [:],
-        raiseOnConnect: CLIError? = nil
+        raiseOnConnect: MotestError? = nil
     ) {
         self.healthOK = healthOK
         self.healthStatus = healthStatus
@@ -77,12 +77,12 @@ public final class MockTransport: KitTransport, @unchecked Sendable {
         self.raiseOnConnect = raiseOnConnect
     }
 
-    public func fetchHealth() async throws -> HealthResult {
+    func fetchHealth() async throws -> HealthResult {
         if let raiseOnConnect { throw raiseOnConnect }
         return HealthResult(ok: healthOK, statusCode: healthStatus, durationMs: healthDurationMs)
     }
 
-    public func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
+    func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
         calls.append((method, params))
         if let raiseOnConnect { throw raiseOnConnect }
         if let response = responses[method] { return response }
@@ -93,24 +93,24 @@ public final class MockTransport: KitTransport, @unchecked Sendable {
         )
     }
 
-    public func callAction(method: String, params: JSONValue?, rpcID: Int = 1) async throws {
+    func callAction(method: String, params: JSONValue?, rpcID: Int = 1) async throws {
         let response = try await call(method: method, params: params, rpcID: rpcID)
         if let error = response.error {
-            throw CLIError.rpc(error.message, command: method)
+            throw MotestError.rpc(error.message, command: method)
         }
     }
 }
 
-public final class HTTPHealthTransport: KitTransport, @unchecked Sendable {
+final class HTTPHealthTransport: KitTransport, @unchecked Sendable {
     private let config: Config
 
-    public init(config: Config) {
+    init(config: Config) {
         self.config = config
     }
 
-    public func fetchHealth() async throws -> HealthResult {
+    func fetchHealth() async throws -> HealthResult {
         guard let url = config.healthURL() else {
-            throw CLIError.transport("invalid base URL")
+            throw MotestError.transport("invalid base URL")
         }
         let started = Date()
         do {
@@ -121,31 +121,31 @@ public final class HTTPHealthTransport: KitTransport, @unchecked Sendable {
             let duration = Int(Date().timeIntervalSince(started) * 1000)
             return HealthResult(ok: (200..<300).contains(statusCode), statusCode: statusCode, durationMs: duration)
         } catch {
-            throw CLIError.transport("Connection refused: \(error.localizedDescription)")
+            throw MotestError.transport("Connection refused: \(error.localizedDescription)")
         }
     }
 
-    public func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
+    func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
         try await WSJSONRPCTransport(config: config).call(method: method, params: params, rpcID: rpcID)
     }
 
-    public func callAction(method: String, params: JSONValue?, rpcID: Int = 1) async throws {
+    func callAction(method: String, params: JSONValue?, rpcID: Int = 1) async throws {
         try await WSJSONRPCTransport(config: config).callAction(method: method, params: params, rpcID: rpcID)
     }
 }
 
-public final class WSJSONRPCTransport: KitTransport, @unchecked Sendable {
+final class WSJSONRPCTransport: KitTransport, @unchecked Sendable {
     private let config: Config
 
-    public init(config: Config) {
+    init(config: Config) {
         self.config = config
     }
 
-    public func fetchHealth() async throws -> HealthResult {
+    func fetchHealth() async throws -> HealthResult {
         try await HTTPHealthTransport(config: config).fetchHealth()
     }
 
-    public func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
+    func call(method: String, params: JSONValue?, rpcID: Int = 1) async throws -> JSONRPCResponse {
         try await Timeout.run(seconds: config.timeoutSec) {
             try await self.callUnbounded(method: method, params: params, rpcID: rpcID)
         }
@@ -153,7 +153,7 @@ public final class WSJSONRPCTransport: KitTransport, @unchecked Sendable {
 
     private func callUnbounded(method: String, params: JSONValue?, rpcID: Int) async throws -> JSONRPCResponse {
         guard let url = config.wsURL() else {
-            throw CLIError.transport("invalid base URL")
+            throw MotestError.transport("invalid base URL")
         }
         let requestText = try WSCodec.encodeRequest(method: method, params: params, rpcID: rpcID)
         let sessionConfig = URLSessionConfiguration.default
@@ -175,15 +175,15 @@ public final class WSJSONRPCTransport: KitTransport, @unchecked Sendable {
         case .data(let data):
             raw = String(decoding: data, as: UTF8.self)
         @unknown default:
-            throw CLIError.internal("unexpected websocket frame")
+            throw MotestError.internal("unexpected websocket frame")
         }
         return try WSCodec.decodeResponse(raw, rpcID: rpcID)
     }
 
-    public func callAction(method: String, params: JSONValue?, rpcID: Int = 1) async throws {
+    func callAction(method: String, params: JSONValue?, rpcID: Int = 1) async throws {
         let response = try await call(method: method, params: params, rpcID: rpcID)
         if let error = response.error {
-            throw CLIError.rpc(error.message, command: method)
+            throw MotestError.rpc(error.message, command: method)
         }
     }
 }

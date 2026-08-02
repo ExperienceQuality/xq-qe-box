@@ -25,7 +25,7 @@ final class CommandRunnerTests: XCTestCase {
         XCTAssertThrowsError(
             try CommandRunner.TapTarget.parse(first: "nope", second: nil, ref: nil, x: nil, y: nil)
         ) { error in
-            let cli = error as? CLIError
+            let cli = error as? MotestError
             XCTAssertEqual(cli?.kind, .usage)
         }
     }
@@ -98,7 +98,7 @@ final class CommandRunnerTests: XCTestCase {
                 paramsJSON: nil
             )
             XCTFail("expected usage error")
-        } catch let error as CLIError {
+        } catch let error as MotestError {
             XCTAssertEqual(error.kind, .usage)
             XCTAssertTrue(error.hint.contains("xq-motest rpc "))
             XCTAssertFalse(error.hint.contains("--method"))

@@ -61,10 +61,7 @@ struct Health: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            let envelope = try await CommandRunner.health(
-                config: config,
-                transport: WSJSONRPCTransport(config: config)
-            )
+            let envelope = try await CommandRunner.health(config: config)
             CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "health")
@@ -81,11 +78,7 @@ struct Map: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            let envelope = try await CommandRunner.map(
-                config: config,
-                transport: WSJSONRPCTransport(config: config),
-                includeRaw: includeRaw
-            )
+            let envelope = try await CommandRunner.map(config: config, includeRaw: includeRaw)
             CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "map")
@@ -134,7 +127,6 @@ struct Tap: AsyncParsableCommand {
         do {
             try await CommandRunner.tap(
                 config: config,
-                transport: WSJSONRPCTransport(config: config),
                 first: first,
                 second: second,
                 ref: ref,
@@ -164,13 +156,7 @@ struct TypeText: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            try await CommandRunner.type(
-                config: config,
-                transport: WSJSONRPCTransport(config: config),
-                first: first,
-                rest: rest,
-                ref: ref
-            )
+            try await CommandRunner.type(config: config, first: first, rest: rest, ref: ref)
             CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "type")
@@ -187,11 +173,7 @@ struct Screenshot: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            try await CommandRunner.screenshot(
-                config: config,
-                transport: WSJSONRPCTransport(config: config),
-                path: path
-            )
+            try await CommandRunner.screenshot(config: config, path: path)
             CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "screenshot")
@@ -208,11 +190,7 @@ struct Launch: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            try await CommandRunner.launch(
-                config: config,
-                transport: WSJSONRPCTransport(config: config),
-                bundleID: bundleID
-            )
+            try await CommandRunner.launch(config: config, bundleID: bundleID)
             CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "launch")
@@ -227,10 +205,7 @@ struct Foreground: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            try await CommandRunner.foreground(
-                config: config,
-                transport: WSJSONRPCTransport(config: config)
-            )
+            try await CommandRunner.foreground(config: config)
             CLIEmit.emit(nil, pretty: config.pretty, tier: .action)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "foreground")
@@ -245,10 +220,7 @@ struct Dump: AsyncParsableCommand {
     mutating func run() async throws {
         let config = globals.makeConfig()
         do {
-            let envelope = try await CommandRunner.dump(
-                config: config,
-                transport: WSJSONRPCTransport(config: config)
-            )
+            let envelope = try await CommandRunner.dump(config: config)
             CLIEmit.emit(envelope, pretty: config.pretty, tier: .data)
         } catch {
             CLIEmit.emitFailure(error, pretty: config.pretty, command: "dump")
@@ -269,7 +241,6 @@ struct Rpc: AsyncParsableCommand {
         do {
             let envelope = try await CommandRunner.rpc(
                 config: config,
-                transport: WSJSONRPCTransport(config: config),
                 method: method,
                 paramsJSON: params
             )

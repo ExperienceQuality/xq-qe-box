@@ -16,7 +16,7 @@ final class TimeoutTests: XCTestCase {
                 return "late"
             }
             XCTFail("expected timeout")
-        } catch let error as CLIError {
+        } catch let error as MotestError {
             XCTAssertEqual(error.kind, .timeout)
             XCTAssertEqual(error.exitCode, ExitCodes.timeout)
             XCTAssertTrue(error.message.contains("timed out"))
@@ -25,16 +25,16 @@ final class TimeoutTests: XCTestCase {
         }
     }
 
-    func testWrappingPreservesCLIError() {
-        let original = CLIError.timeout("boom")
-        let wrapped = CLIError.wrapping(original)
+    func testWrappingPreservesMotestError() {
+        let original = MotestError.timeout("boom")
+        let wrapped = MotestError.wrapping(original)
         XCTAssertEqual(wrapped.kind, .timeout)
         XCTAssertEqual(wrapped.message, "boom")
     }
 
     func testWrappingMapsUnknownErrors() {
         struct Weird: Error {}
-        let wrapped = CLIError.wrapping(Weird(), command: "tap")
+        let wrapped = MotestError.wrapping(Weird(), command: "tap")
         XCTAssertEqual(wrapped.kind, .internal)
         XCTAssertEqual(wrapped.exitCode, ExitCodes.internal)
         XCTAssertEqual(wrapped.command, "tap")

@@ -33,7 +33,7 @@ enum CLIEmit {
         exit(ExitCodes.success)
     }
 
-    static func emitFailure(_ error: CLIError, pretty: Bool) -> Never {
+    static func emitFailure(_ error: MotestError, pretty: Bool) -> Never {
         if pretty {
             fputs("error: \(error.message)\n", stderr)
             fputs("hint: \(error.hint)\n", stderr)
@@ -53,6 +53,6 @@ enum CLIEmit {
     }
 
     static func emitFailure(_ error: Error, pretty: Bool, command: String? = nil) -> Never {
-        emitFailure(CLIError.wrapping(error, command: command), pretty: pretty)
+        emitFailure(MotestError.wrapping(error, command: command), pretty: pretty)
     }
 }
