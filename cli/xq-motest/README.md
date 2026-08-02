@@ -44,7 +44,7 @@ xq-motest diff map
 | `launch BUNDLE_ID` | action | app under test |
 | `foreground` | action | |
 | `dump` | data | raw `device.dump.ui` |
-| `rpc --method NAME` | data | escape hatch |
+| `rpc METHOD [PARAMS_JSON]` | data | escape hatch |
 | `devicekit start/status` | mixed | start already-installed runner; status |
 
 ## Environment
