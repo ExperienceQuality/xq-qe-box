@@ -1,6 +1,10 @@
 import Foundation
 
+/// Session command surface — every mutation/query agents need.
+/// The executable only parses argv and maps results/errors to CLIEmit.
 public enum CommandRunner {
+    // MARK: - Data verbs
+
     public static func health(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
         let health = try await transport.fetchHealth()
         let result: JSONValue = .object([
@@ -23,10 +27,19 @@ public enum CommandRunner {
         paramsJSON: String?
     ) async throws -> [String: JSONValue] {
         guard let method, !method.isEmpty else {
-            throw CLIError.usage("Missing --method", hint: "xq-motest rpc --method device.dump.ui", command: "rpc")
+            throw CLIError.usage(
+                "Missing method",
+                hint: "xq-motest rpc device.dump.ui",
+                command: "rpc"
+            )
         }
         let params = try parseParams(paramsJSON)
-        let (result, duration) = try await KitCall.call(config: config, transport: transport, method: method, params: params)
+        let (result, duration) = try await KitCall.call(
+            config: config,
+            transport: transport,
+            method: method,
+            params: params
+        )
         return Envelope.success(
             command: "rpc",
             result: result,
@@ -41,7 +54,12 @@ public enum CommandRunner {
         transport: any KitTransport,
         includeRaw: Bool = false
     ) async throws -> [String: JSONValue] {
-        let (raw, duration) = try await KitCall.call(config: config, transport: transport, method: "device.dump.ui", params: .object([:]))
+        let (raw, duration) = try await KitCall.call(
+            config: config,
+            transport: transport,
+            method: "device.dump.ui",
+            params: .object([:])
+        )
         let assigned = MapRefs.assign(raw)
         let store = MapStore(stateDir: config.stateDir)
         try store.snapshotPreviousMap()
@@ -82,6 +100,42 @@ public enum CommandRunner {
         return Envelope.success(command: "diff.map", result: .object(result), baseURL: config.baseURL)
     }
 
+    public static func dump(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
+        let (result, duration) = try await KitCall.call(
+            config: config,
+            transport: transport,
+            method: "device.dump.ui",
+            params: .object([:])
+        )
+        return Envelope.success(
+            command: "dump",
+            result: result,
+            baseURL: config.baseURL,
+            method: "device.dump.ui",
+            durationMs: duration
+        )
+    }
+
+    public static func devicekitStatus(config: Config, device: String?) async -> [String: JSONValue] {
+        let status = await DeviceKitRuntime.status(config: config, device: device)
+        let result: JSONValue = .object([
+            "installed": .bool(status.installed),
+            "bundle_id": status.bundleID.map(JSONValue.string) ?? .null,
+            "version": status.version.map(JSONValue.string) ?? .null,
+            "server_reachable": .bool(status.serverReachable),
+            "base_url": .string(status.baseURL),
+            "device_id": status.deviceID.map(JSONValue.string) ?? .null,
+            "mode": status.mode.map(JSONValue.string) ?? .null,
+        ])
+        return Envelope.success(
+            command: "devicekit.status",
+            result: result,
+            baseURL: config.baseURL
+        )
+    }
+
+    // MARK: - Action verbs
+
     public static func tap(
         config: Config,
         transport: any KitTransport,
@@ -91,8 +145,27 @@ public enum CommandRunner {
     ) async throws {
         let store = MapStore(stateDir: config.stateDir)
         let params = try store.resolveTap(ref: ref, x: x, y: y)
-        try await KitCall.action(config: config, transport: transport, method: "device.io.tap", params: .object(params))
+        try await KitCall.action(
+            config: config,
+            transport: transport,
+            method: "device.io.tap",
+            params: .object(params)
+        )
         try store.invalidate()
+    }
+
+    /// Parse CLI positional/flag forms into tap coordinates, then tap.
+    public static func tap(
+        config: Config,
+        transport: any KitTransport,
+        first: String,
+        second: String?,
+        ref: String?,
+        x: Int?,
+        y: Int?
+    ) async throws {
+        let target = try TapTarget.parse(first: first, second: second, ref: ref, x: x, y: y)
+        try await tap(config: config, transport: transport, ref: target.ref, x: target.x, y: target.y)
     }
 
     public static func type(
@@ -106,7 +179,12 @@ public enum CommandRunner {
         }
         let store = MapStore(stateDir: config.stateDir)
         if let target = try store.resolveTypeTarget(ref: ref) {
-            try await KitCall.action(config: config, transport: transport, method: "device.io.tap", params: .object(target))
+            try await KitCall.action(
+                config: config,
+                transport: transport,
+                method: "device.io.tap",
+                params: .object(target)
+            )
         }
         try await KitCall.action(
             config: config,
@@ -115,6 +193,17 @@ public enum CommandRunner {
             params: .object(["text": .string(text)])
         )
         try store.invalidate()
+    }
+
+    public static func type(
+        config: Config,
+        transport: any KitTransport,
+        first: String,
+        rest: [String],
+        ref: String?
+    ) async throws {
+        let parsed = TypeInput.parse(first: first, rest: rest, ref: ref)
+        try await type(config: config, transport: transport, text: parsed.text, ref: parsed.ref)
     }
 
     public static func launch(
@@ -134,14 +223,102 @@ public enum CommandRunner {
         try MapStore(stateDir: config.stateDir).invalidate()
     }
 
-    public static func dump(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
-        let (result, duration) = try await KitCall.call(config: config, transport: transport, method: "device.dump.ui", params: .object([:]))
-        return Envelope.success(
-            command: "dump",
-            result: result,
-            baseURL: config.baseURL,
-            method: "device.dump.ui",
-            durationMs: duration
+    public static func foreground(config: Config, transport: any KitTransport) async throws {
+        try await KitCall.action(
+            config: config,
+            transport: transport,
+            method: "device.apps.foreground",
+            params: .object([:])
+        )
+    }
+
+    public static func screenshot(
+        config: Config,
+        transport: any KitTransport,
+        path: String
+    ) async throws {
+        let (result, _) = try await KitCall.call(
+            config: config,
+            transport: transport,
+            method: "device.screenshot",
+            params: .object([:])
+        )
+        let bytes = try extractScreenshotBytes(result)
+        let url = URL(fileURLWithPath: path)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try bytes.write(to: url)
+    }
+
+    public static func devicekitStart(config: Config, sim: Bool, deviceID: String?) async throws {
+        try await DeviceKitRuntime.start(config: config, sim: sim, deviceID: deviceID)
+    }
+
+    // MARK: - Arg parsing (Session input, not ArgumentParser)
+
+    public struct TapTarget: Equatable, Sendable {
+        public var ref: String?
+        public var x: Int?
+        public var y: Int?
+
+        public static func parse(
+            first: String,
+            second: String?,
+            ref: String?,
+            x: Int?,
+            y: Int?
+        ) throws -> TapTarget {
+            if let ref {
+                return TapTarget(ref: ref, x: x, y: y)
+            }
+            if first.hasPrefix("@e") {
+                return TapTarget(ref: first, x: nil, y: nil)
+            }
+            if let second, let px = Int(first), let py = Int(second) {
+                return TapTarget(ref: nil, x: px, y: py)
+            }
+            throw CLIError.usage(
+                "tap requires @eN or X Y coordinates",
+                hint: "xq-motest tap @e3",
+                command: "tap"
+            )
+        }
+    }
+
+    public struct TypeInput: Equatable, Sendable {
+        public var text: String
+        public var ref: String?
+
+        public static func parse(first: String, rest: [String], ref: String?) -> TypeInput {
+            if let ref {
+                return TypeInput(text: ([first] + rest).joined(separator: " "), ref: ref)
+            }
+            if first.hasPrefix("@e") {
+                return TypeInput(text: rest.joined(separator: " "), ref: first)
+            }
+            return TypeInput(text: ([first] + rest).joined(separator: " "), ref: nil)
+        }
+    }
+
+    // MARK: - Private
+
+    private static func extractScreenshotBytes(_ result: JSONValue) throws -> Data {
+        if case .string(let base64) = result, let data = Data(base64Encoded: base64) {
+            return data
+        }
+        if let object = result.objectValue {
+            for key in ["data", "image", "png", "base64"] {
+                if case .string(let base64) = object[key], let data = Data(base64Encoded: base64) {
+                    return data
+                }
+            }
+        }
+        throw CLIError.usage(
+            "Unexpected screenshot payload",
+            hint: "xq-motest screenshot /tmp/screen.png",
+            command: "screenshot"
         )
     }
 
@@ -151,8 +328,8 @@ public enum CommandRunner {
             return try JSONValue.decode(from: paramsJSON)
         } catch {
             throw CLIError.usage(
-                "Invalid --params JSON: \(error.localizedDescription)",
-                hint: #"xq-motest rpc --method device.io.tap --params '{"x":0,"y":0}'"#,
+                "Invalid params JSON: \(error.localizedDescription)",
+                hint: #"xq-motest rpc device.io.tap '{"x":0,"y":0}'"#,
                 command: "rpc"
             )
         }
