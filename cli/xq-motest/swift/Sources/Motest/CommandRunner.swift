@@ -1,11 +1,163 @@
 import Foundation
 
 /// Session command surface — every mutation/query agents need.
-/// The executable only parses argv and maps results/errors to CLIEmit.
+/// The executable only parses argv, calls these entry points, and maps MotestError via CLIEmit.
 public enum CommandRunner {
-    // MARK: - Data verbs
+    // MARK: - Public Session entry points (live DeviceKit transport)
 
-    public static func health(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
+    public static func health(config: Config) async throws -> [String: JSONValue] {
+        try await health(config: config, transport: liveTransport(config))
+    }
+
+    public static func rpc(
+        config: Config,
+        method: String?,
+        paramsJSON: String?
+    ) async throws -> [String: JSONValue] {
+        try await rpc(config: config, transport: liveTransport(config), method: method, paramsJSON: paramsJSON)
+    }
+
+    public static func map(config: Config, includeRaw: Bool = false) async throws -> [String: JSONValue] {
+        try await map(config: config, transport: liveTransport(config), includeRaw: includeRaw)
+    }
+
+    public static func diffMap(config: Config) throws -> [String: JSONValue] {
+        let store = MapStore(stateDir: config.stateDir)
+        let current = try store.load()
+        let previousPath = config.stateDir.appendingPathComponent("previous-map.json")
+        guard FileManager.default.fileExists(atPath: previousPath.path) else {
+            throw MotestError.usage("No previous map to diff against", hint: "xq-motest map", command: "diff.map")
+        }
+        let data = try Data(contentsOf: previousPath)
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let previous = MapDocument.fromDictionary(JSONValue(any: object).objectValue ?? [:])
+        let result = DiffMap.diff(previous: previous, current: current)
+        return Envelope.success(command: "diff.map", result: .object(result), baseURL: config.baseURL)
+    }
+
+    public static func dump(config: Config) async throws -> [String: JSONValue] {
+        try await dump(config: config, transport: liveTransport(config))
+    }
+
+    public static func devicekitStatus(config: Config, device: String?) async -> [String: JSONValue] {
+        let status = await DeviceKitRuntime.status(config: config, device: device)
+        let result: JSONValue = .object([
+            "installed": .bool(status.installed),
+            "bundle_id": status.bundleID.map(JSONValue.string) ?? .null,
+            "version": status.version.map(JSONValue.string) ?? .null,
+            "server_reachable": .bool(status.serverReachable),
+            "base_url": .string(status.baseURL),
+            "device_id": status.deviceID.map(JSONValue.string) ?? .null,
+            "mode": status.mode.map(JSONValue.string) ?? .null,
+        ])
+        return Envelope.success(
+            command: "devicekit.status",
+            result: result,
+            baseURL: config.baseURL
+        )
+    }
+
+    public static func tap(
+        config: Config,
+        first: String,
+        second: String?,
+        ref: String?,
+        x: Int?,
+        y: Int?
+    ) async throws {
+        try await tap(
+            config: config,
+            transport: liveTransport(config),
+            first: first,
+            second: second,
+            ref: ref,
+            x: x,
+            y: y
+        )
+    }
+
+    public static func type(
+        config: Config,
+        first: String,
+        rest: [String],
+        ref: String?
+    ) async throws {
+        try await type(
+            config: config,
+            transport: liveTransport(config),
+            first: first,
+            rest: rest,
+            ref: ref
+        )
+    }
+
+    public static func launch(config: Config, bundleID: String) async throws {
+        try await launch(config: config, transport: liveTransport(config), bundleID: bundleID)
+    }
+
+    public static func foreground(config: Config) async throws {
+        try await foreground(config: config, transport: liveTransport(config))
+    }
+
+    public static func screenshot(config: Config, path: String) async throws {
+        try await screenshot(config: config, transport: liveTransport(config), path: path)
+    }
+
+    public static func devicekitStart(config: Config, sim: Bool, deviceID: String?) async throws {
+        try await DeviceKitRuntime.start(config: config, sim: sim, deviceID: deviceID)
+    }
+
+    public struct TapTarget: Equatable, Sendable {
+        public var ref: String?
+        public var x: Int?
+        public var y: Int?
+
+        public static func parse(
+            first: String,
+            second: String?,
+            ref: String?,
+            x: Int?,
+            y: Int?
+        ) throws -> TapTarget {
+            if let ref {
+                return TapTarget(ref: ref, x: x, y: y)
+            }
+            if first.hasPrefix("@e") {
+                return TapTarget(ref: first, x: nil, y: nil)
+            }
+            if let second, let px = Int(first), let py = Int(second) {
+                return TapTarget(ref: nil, x: px, y: py)
+            }
+            throw MotestError.usage(
+                "tap requires @eN or X Y coordinates",
+                hint: "xq-motest tap @e3",
+                command: "tap"
+            )
+        }
+    }
+
+    public struct TypeInput: Equatable, Sendable {
+        public var text: String
+        public var ref: String?
+
+        public static func parse(first: String, rest: [String], ref: String?) -> TypeInput {
+            if let ref {
+                return TypeInput(text: ([first] + rest).joined(separator: " "), ref: ref)
+            }
+            if first.hasPrefix("@e") {
+                return TypeInput(text: rest.joined(separator: " "), ref: first)
+            }
+            return TypeInput(text: ([first] + rest).joined(separator: " "), ref: nil)
+        }
+    }
+
+    // MARK: - Internal (injectable transport — tests / advanced)
+
+    static func liveTransport(_ config: Config) -> any KitTransport {
+        WSJSONRPCTransport(config: config)
+    }
+
+    static func health(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
         let health = try await transport.fetchHealth()
         let result: JSONValue = .object([
             "reachable": .bool(health.ok),
@@ -20,14 +172,14 @@ public enum CommandRunner {
         )
     }
 
-    public static func rpc(
+    static func rpc(
         config: Config,
         transport: any KitTransport,
         method: String?,
         paramsJSON: String?
     ) async throws -> [String: JSONValue] {
         guard let method, !method.isEmpty else {
-            throw CLIError.usage(
+            throw MotestError.usage(
                 "Missing method",
                 hint: "xq-motest rpc device.dump.ui",
                 command: "rpc"
@@ -49,7 +201,7 @@ public enum CommandRunner {
         )
     }
 
-    public static func map(
+    static func map(
         config: Config,
         transport: any KitTransport,
         includeRaw: Bool = false
@@ -86,21 +238,7 @@ public enum CommandRunner {
         )
     }
 
-    public static func diffMap(config: Config) throws -> [String: JSONValue] {
-        let store = MapStore(stateDir: config.stateDir)
-        let current = try store.load()
-        let previousPath = config.stateDir.appendingPathComponent("previous-map.json")
-        guard FileManager.default.fileExists(atPath: previousPath.path) else {
-            throw CLIError.usage("No previous map to diff against", hint: "xq-motest map", command: "diff.map")
-        }
-        let data = try Data(contentsOf: previousPath)
-        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        let previous = MapDocument.fromDictionary(JSONValue(any: object).objectValue ?? [:])
-        let result = DiffMap.diff(previous: previous, current: current)
-        return Envelope.success(command: "diff.map", result: .object(result), baseURL: config.baseURL)
-    }
-
-    public static func dump(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
+    static func dump(config: Config, transport: any KitTransport) async throws -> [String: JSONValue] {
         let (result, duration) = try await KitCall.call(
             config: config,
             transport: transport,
@@ -116,27 +254,7 @@ public enum CommandRunner {
         )
     }
 
-    public static func devicekitStatus(config: Config, device: String?) async -> [String: JSONValue] {
-        let status = await DeviceKitRuntime.status(config: config, device: device)
-        let result: JSONValue = .object([
-            "installed": .bool(status.installed),
-            "bundle_id": status.bundleID.map(JSONValue.string) ?? .null,
-            "version": status.version.map(JSONValue.string) ?? .null,
-            "server_reachable": .bool(status.serverReachable),
-            "base_url": .string(status.baseURL),
-            "device_id": status.deviceID.map(JSONValue.string) ?? .null,
-            "mode": status.mode.map(JSONValue.string) ?? .null,
-        ])
-        return Envelope.success(
-            command: "devicekit.status",
-            result: result,
-            baseURL: config.baseURL
-        )
-    }
-
-    // MARK: - Action verbs
-
-    public static func tap(
+    static func tap(
         config: Config,
         transport: any KitTransport,
         ref: String?,
@@ -154,8 +272,7 @@ public enum CommandRunner {
         try store.invalidate()
     }
 
-    /// Parse CLI positional/flag forms into tap coordinates, then tap.
-    public static func tap(
+    static func tap(
         config: Config,
         transport: any KitTransport,
         first: String,
@@ -168,14 +285,14 @@ public enum CommandRunner {
         try await tap(config: config, transport: transport, ref: target.ref, x: target.x, y: target.y)
     }
 
-    public static func type(
+    static func type(
         config: Config,
         transport: any KitTransport,
         text: String,
         ref: String?
     ) async throws {
         guard !text.isEmpty else {
-            throw CLIError.usage("type requires text", hint: "xq-motest type @e2 hello", command: "type")
+            throw MotestError.usage("type requires text", hint: "xq-motest type @e2 hello", command: "type")
         }
         let store = MapStore(stateDir: config.stateDir)
         if let target = try store.resolveTypeTarget(ref: ref) {
@@ -195,7 +312,7 @@ public enum CommandRunner {
         try store.invalidate()
     }
 
-    public static func type(
+    static func type(
         config: Config,
         transport: any KitTransport,
         first: String,
@@ -206,13 +323,13 @@ public enum CommandRunner {
         try await type(config: config, transport: transport, text: parsed.text, ref: parsed.ref)
     }
 
-    public static func launch(
+    static func launch(
         config: Config,
         transport: any KitTransport,
         bundleID: String
     ) async throws {
         guard !bundleID.isEmpty else {
-            throw CLIError.usage("Missing bundle id", hint: "xq-motest launch com.example.app", command: "launch")
+            throw MotestError.usage("Missing bundle id", hint: "xq-motest launch com.example.app", command: "launch")
         }
         try await KitCall.action(
             config: config,
@@ -223,7 +340,7 @@ public enum CommandRunner {
         try MapStore(stateDir: config.stateDir).invalidate()
     }
 
-    public static func foreground(config: Config, transport: any KitTransport) async throws {
+    static func foreground(config: Config, transport: any KitTransport) async throws {
         try await KitCall.action(
             config: config,
             transport: transport,
@@ -232,7 +349,7 @@ public enum CommandRunner {
         )
     }
 
-    public static func screenshot(
+    static func screenshot(
         config: Config,
         transport: any KitTransport,
         path: String
@@ -252,56 +369,6 @@ public enum CommandRunner {
         try bytes.write(to: url)
     }
 
-    public static func devicekitStart(config: Config, sim: Bool, deviceID: String?) async throws {
-        try await DeviceKitRuntime.start(config: config, sim: sim, deviceID: deviceID)
-    }
-
-    // MARK: - Arg parsing (Session input, not ArgumentParser)
-
-    public struct TapTarget: Equatable, Sendable {
-        public var ref: String?
-        public var x: Int?
-        public var y: Int?
-
-        public static func parse(
-            first: String,
-            second: String?,
-            ref: String?,
-            x: Int?,
-            y: Int?
-        ) throws -> TapTarget {
-            if let ref {
-                return TapTarget(ref: ref, x: x, y: y)
-            }
-            if first.hasPrefix("@e") {
-                return TapTarget(ref: first, x: nil, y: nil)
-            }
-            if let second, let px = Int(first), let py = Int(second) {
-                return TapTarget(ref: nil, x: px, y: py)
-            }
-            throw CLIError.usage(
-                "tap requires @eN or X Y coordinates",
-                hint: "xq-motest tap @e3",
-                command: "tap"
-            )
-        }
-    }
-
-    public struct TypeInput: Equatable, Sendable {
-        public var text: String
-        public var ref: String?
-
-        public static func parse(first: String, rest: [String], ref: String?) -> TypeInput {
-            if let ref {
-                return TypeInput(text: ([first] + rest).joined(separator: " "), ref: ref)
-            }
-            if first.hasPrefix("@e") {
-                return TypeInput(text: rest.joined(separator: " "), ref: first)
-            }
-            return TypeInput(text: ([first] + rest).joined(separator: " "), ref: nil)
-        }
-    }
-
     // MARK: - Private
 
     private static func extractScreenshotBytes(_ result: JSONValue) throws -> Data {
@@ -315,7 +382,7 @@ public enum CommandRunner {
                 }
             }
         }
-        throw CLIError.usage(
+        throw MotestError.usage(
             "Unexpected screenshot payload",
             hint: "xq-motest screenshot /tmp/screen.png",
             command: "screenshot"
@@ -327,7 +394,7 @@ public enum CommandRunner {
         do {
             return try JSONValue.decode(from: paramsJSON)
         } catch {
-            throw CLIError.usage(
+            throw MotestError.usage(
                 "Invalid params JSON: \(error.localizedDescription)",
                 hint: #"xq-motest rpc device.io.tap '{"x":0,"y":0}'"#,
                 command: "rpc"

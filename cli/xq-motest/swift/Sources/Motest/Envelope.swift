@@ -14,7 +14,7 @@ public enum ResponseTier: Sendable {
     case data
 }
 
-public struct CLIError: Error, Sendable {
+public struct MotestError: Error, Sendable {
     public let kind: ErrorKind
     public let message: String
     public let hint: String
@@ -35,41 +35,41 @@ public struct CLIError: Error, Sendable {
         self.command = command
     }
 
-    public static func usage(_ message: String, hint: String, command: String? = nil) -> CLIError {
-        CLIError(kind: .usage, message: message, hint: hint, exitCode: ExitCodes.usage, command: command)
+    public static func usage(_ message: String, hint: String, command: String? = nil) -> MotestError {
+        MotestError(kind: .usage, message: message, hint: hint, exitCode: ExitCodes.usage, command: command)
     }
 
     public static func transport(
         _ message: String,
         hint: String = "xq-motest devicekit start --sim && xq-motest health",
         command: String? = nil
-    ) -> CLIError {
-        CLIError(kind: .transport, message: message, hint: hint, exitCode: ExitCodes.transport, command: command)
+    ) -> MotestError {
+        MotestError(kind: .transport, message: message, hint: hint, exitCode: ExitCodes.transport, command: command)
     }
 
-    public static func rpc(_ message: String, command: String? = nil) -> CLIError {
-        CLIError(kind: .rpc, message: message, hint: message, exitCode: ExitCodes.rpc, command: command)
+    public static func rpc(_ message: String, command: String? = nil) -> MotestError {
+        MotestError(kind: .rpc, message: message, hint: message, exitCode: ExitCodes.rpc, command: command)
     }
 
-    public static func `internal`(_ message: String, command: String? = nil) -> CLIError {
-        CLIError(kind: .internal, message: message, hint: message, exitCode: ExitCodes.internal, command: command)
+    public static func `internal`(_ message: String, command: String? = nil) -> MotestError {
+        MotestError(kind: .internal, message: message, hint: message, exitCode: ExitCodes.internal, command: command)
     }
 
-    public static func runtime(_ message: String, hint: String, command: String? = nil) -> CLIError {
-        CLIError(kind: .runtime, message: message, hint: hint, exitCode: ExitCodes.runtime, command: command)
+    public static func runtime(_ message: String, hint: String, command: String? = nil) -> MotestError {
+        MotestError(kind: .runtime, message: message, hint: hint, exitCode: ExitCodes.runtime, command: command)
     }
 
     public static func timeout(
         _ message: String,
         hint: String = "raise --timeout / XQ_MOTEST_TIMEOUT, or check DeviceKit is responding",
         command: String? = nil
-    ) -> CLIError {
-        CLIError(kind: .timeout, message: message, hint: hint, exitCode: ExitCodes.timeout, command: command)
+    ) -> MotestError {
+        MotestError(kind: .timeout, message: message, hint: hint, exitCode: ExitCodes.timeout, command: command)
     }
 
-    /// Map any thrown error into CLIError for the executable edge.
-    public static func wrapping(_ error: Error, command: String? = nil) -> CLIError {
-        if let cli = error as? CLIError { return cli }
+    /// Map any thrown error into MotestError for the executable edge.
+    public static func wrapping(_ error: Error, command: String? = nil) -> MotestError {
+        if let err = error as? MotestError { return err }
         return .internal(String(describing: error), command: command)
     }
 }

@@ -22,7 +22,7 @@ final class DeviceKitRuntimeTests: XCTestCase {
         do {
             try await DeviceKitRuntime.ensure(config: config)
             XCTFail("expected runtime error")
-        } catch let error as CLIError {
+        } catch let error as MotestError {
             XCTAssertEqual(error.exitCode, ExitCodes.runtime)
             XCTAssertTrue(
                 error.hint.contains("infra") || error.message.contains("UDID"),

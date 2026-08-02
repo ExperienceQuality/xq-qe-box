@@ -26,7 +26,7 @@ final class TransportTests: XCTestCase {
         do {
             _ = try await KitCall.call(config: config, transport: transport, method: "device.dump.ui")
             XCTFail("expected rpc error")
-        } catch let error as CLIError {
+        } catch let error as MotestError {
             XCTAssertEqual(error.exitCode, ExitCodes.rpc)
         }
     }

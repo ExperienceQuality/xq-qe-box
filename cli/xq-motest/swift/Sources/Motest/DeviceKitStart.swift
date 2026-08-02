@@ -9,7 +9,7 @@ enum DeviceKitStart {
     ) async throws {
         let state = try simulatorState(udid: udid)
         guard state == "Booted" else {
-            throw CLIError.runtime(
+            throw MotestError.runtime(
                 "simulator is offline (state: \(state)); boot it first: xcrun simctl boot \(udid)",
                 hint: "xcrun simctl boot \(udid)"
             )
@@ -28,7 +28,7 @@ enum DeviceKitStart {
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
             let message = String(decoding: stderr.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            throw CLIError.runtime(message.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
+            throw MotestError.runtime(message.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
         }
 
         try await DeviceKitRuntime.waitUntilHealthy(port: port, timeoutSec: min(30, config.timeoutSec))
@@ -42,7 +42,7 @@ enum DeviceKitStart {
         port: Int
     ) async throws {
         guard FileManager.default.fileExists(atPath: "/usr/bin/xcrun") else {
-            throw CLIError.runtime(
+            throw MotestError.runtime(
                 "real-device start requires Xcode (xcodebuild)",
                 hint: "install Xcode and run xcode-select --install"
             )
