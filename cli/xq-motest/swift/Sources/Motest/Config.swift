@@ -7,6 +7,9 @@ public struct Config: Sendable {
     public var ensureRuntime: Bool
     public var stateDir: URL
     public var deviceID: String?
+    /// Directory with build-for-testing products (`.xctestrun` + `Release-iphoneos/`).
+    /// Required for real-device `devicekit start` (Apple-only path). Env: `XQ_MOTEST_DEVICEKIT_PRODUCTS`.
+    public var productsDir: URL?
 
     public init(
         baseURL: String = "http://127.0.0.1:12004",
@@ -14,7 +17,8 @@ public struct Config: Sendable {
         pretty: Bool = false,
         ensureRuntime: Bool = true,
         stateDir: URL? = nil,
-        deviceID: String? = nil
+        deviceID: String? = nil,
+        productsDir: URL? = nil
     ) {
         self.baseURL = baseURL
         self.timeoutSec = timeoutSec
@@ -22,6 +26,7 @@ public struct Config: Sendable {
         self.ensureRuntime = ensureRuntime
         self.stateDir = stateDir ?? Config.defaultStateDir()
         self.deviceID = deviceID
+        self.productsDir = productsDir
     }
 
     public static func defaultStateDir() -> URL {
@@ -35,9 +40,13 @@ public struct Config: Sendable {
         pretty: Bool = false,
         ensureRuntime: Bool = true,
         stateDir: URL? = nil,
-        deviceID: String? = nil
+        deviceID: String? = nil,
+        productsDir: URL? = nil
     ) -> Config {
         let env = ProcessInfo.processInfo.environment
+        let products = productsDir ?? env["XQ_MOTEST_DEVICEKIT_PRODUCTS"].map {
+            URL(fileURLWithPath: $0, isDirectory: true)
+        }
         return Config(
             baseURL: baseURL ?? env["XQ_MOTEST_BASE_URL"] ?? "http://127.0.0.1:12004",
             timeoutSec: timeoutSec ?? TimeInterval(env["XQ_MOTEST_TIMEOUT"] ?? "") ?? 30,
@@ -46,7 +55,8 @@ public struct Config: Sendable {
             stateDir: stateDir ?? env["XQ_MOTEST_STATE_DIR"].map {
                 URL(fileURLWithPath: $0, isDirectory: true)
             },
-            deviceID: deviceID ?? env["XQ_MOTEST_DEVICE"]
+            deviceID: deviceID ?? env["XQ_MOTEST_DEVICE"],
+            productsDir: products
         )
     }
 

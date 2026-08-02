@@ -31,6 +31,28 @@ xq-motest tap @e3
 xq-motest diff map
 ```
 
+### Real device (Apple-only)
+
+Requires the **presigned IPA already installed**, plus a same-build **Products** sidecar on the Mac
+(`.xctestrun` + `Release-iphoneos/*.app` from `build-for-testing` — not the DeviceKit git tree).
+
+```bash
+export XQ_MOTEST_DEVICEKIT_PRODUCTS=/path/to/Products
+export XQ_MOTEST_BASE_URL=http://<device-wifi-ip>:12004
+
+xq-motest devicekit start --device <UDID> \
+  --products-dir "$XQ_MOTEST_DEVICEKIT_PRODUCTS" \
+  --base-url "$XQ_MOTEST_BASE_URL" \
+  --timeout 120
+
+xq-motest health --base-url "$XQ_MOTEST_BASE_URL" --pretty
+xq-motest map --device <UDID> --base-url "$XQ_MOTEST_BASE_URL" --pretty
+```
+
+Start runs `xcodebuild test-without-building` against that products xctestrun (keeps
+`testRunAutomation` alive). No go-ios / `iproxy` when DeviceKit binds `0.0.0.0` and
+you point `--base-url` at the phone’s Wi‑Fi IP.
+
 ## Commands
 
 | Command | Tier | Notes |
@@ -51,10 +73,11 @@ xq-motest diff map
 
 | Variable | Purpose |
 | --- | --- |
-| `XQ_MOTEST_BASE_URL` | DeviceKit HTTP base (default `http://127.0.0.1:12004`) |
+| `XQ_MOTEST_BASE_URL` | DeviceKit HTTP base (default `http://127.0.0.1:12004`; use device Wi‑Fi IP on hardware) |
 | `XQ_MOTEST_TIMEOUT` | Bound for WebSocket RPC, health waits, and ensure (seconds; also `--timeout`) |
 | `XQ_MOTEST_STATE_DIR` | State directory (default `~/.xq-motest`) |
 | `XQ_MOTEST_DEVICE` | UDID override |
+| `XQ_MOTEST_DEVICEKIT_PRODUCTS` | Products dir for real-device start (also `--products-dir`) |
 
 `--no-ensure-runtime` disables auto-start before RPC verbs (default: auto-start via DeviceKitRuntime when `/health` is down).
 
