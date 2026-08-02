@@ -320,77 +320,16 @@ struct Rpc: AsyncParsableCommand {
 struct DeviceKitCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "devicekit",
-        abstract: "DeviceKit agent lifecycle",
-        subcommands: [InstallCommand.self, StartCommand.self, StatusCommand.self]
+        abstract: "DeviceKit runtime (assumes runner preinstalled by infra)",
+        subcommands: [StartCommand.self, StatusCommand.self]
     )
 }
 
-struct InstallCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "install", abstract: "Install DeviceKit runner")
-
-    @OptionGroup var globals: GlobalOptions
-    @Flag(name: .long, help: "Install on booted simulator")
-    var sim = false
-    @Option(name: .long, help: "Device UDID")
-    var device: String?
-    @Option(name: .long, help: "Provisioning profile for real device")
-    var provisioningProfile: String?
-    @Option(name: .long, help: "Codesign identity override")
-    var signingIdentity: String?
-    @Flag(name: .long, help: "Force reinstall")
-    var force = false
-    @Option(name: .long, help: "Pinned release version")
-    var version: String?
-    @Option(name: .long, help: "Local unsigned IPA path")
-    var ipa: String?
-
-    mutating func run() throws {
-        let config = globals.makeConfig()
-        do {
-            if sim {
-                guard let udid = device ?? config.deviceID ?? ProcessInfo.processInfo.environment["XQ_MOTEST_DEVICE"] else {
-                    throw CLIError.usage(
-                        "devicekit install --sim requires booted simulator UDID via --device",
-                        hint: "xq-motest devicekit install --sim --device <UDID>"
-                    )
-                }
-                try AgentLifecycle.installSim(
-                    config: config,
-                    udid: udid,
-                    version: version ?? "0.0.20",
-                    force: force
-                )
-            } else {
-                guard let udid = device else {
-                    throw CLIError.usage(
-                        "devicekit install requires --sim or --device UDID",
-                        hint: "xq-motest devicekit install --sim"
-                    )
-                }
-                guard let provisioningProfile else {
-                    throw CLIError.usage(
-                        "Missing provisioning profile for device install",
-                        hint: "xq-motest devicekit install --device UDID --provisioning-profile PATH"
-                    )
-                }
-                try AgentLifecycle.installDevice(
-                    config: config,
-                    udid: udid,
-                    provisioningProfile: provisioningProfile,
-                    signingIdentity: signingIdentity,
-                    version: version ?? "0.0.20",
-                    ipaPath: ipa
-                )
-            }
-            Envelope.emit(nil, pretty: config.pretty, tier: .action)
-        } catch let error as CLIError {
-            Envelope.emitFailure(error, pretty: config.pretty)
-        }
-    }
-}
-
 struct StartCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "start", abstract: "Start DeviceKit runner")
+    static let configuration = CommandConfiguration(
+        commandName: "start",
+        abstract: "Start an already-installed DeviceKit runner"
+    )
 
     @OptionGroup var globals: GlobalOptions
     @Flag(name: .long, help: "Start on simulator")
@@ -401,7 +340,7 @@ struct StartCommand: ParsableCommand {
     mutating func run() throws {
         let config = globals.makeConfig()
         do {
-            try AgentLifecycle.start(config: config, sim: sim, deviceID: device)
+            try DeviceKitRuntime.start(config: config, sim: sim, deviceID: device)
             Envelope.emit(nil, pretty: config.pretty, tier: .action)
         } catch let error as CLIError {
             Envelope.emitFailure(error, pretty: config.pretty)
@@ -410,7 +349,10 @@ struct StartCommand: ParsableCommand {
 }
 
 struct StatusCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "status", abstract: "DeviceKit install/runtime status")
+    static let configuration = CommandConfiguration(
+        commandName: "status",
+        abstract: "DeviceKit runtime status"
+    )
 
     @OptionGroup var globals: GlobalOptions
     @Option(name: .long, help: "Device UDID")
@@ -418,7 +360,7 @@ struct StatusCommand: ParsableCommand {
 
     mutating func run() throws {
         let config = globals.makeConfig()
-        let status = AgentLifecycle.status(config: config, device: device)
+        let status = DeviceKitRuntime.status(config: config, device: device)
         let result: JSONValue = .object([
             "installed": .bool(status.installed),
             "bundle_id": status.bundleID.map(JSONValue.string) ?? .null,

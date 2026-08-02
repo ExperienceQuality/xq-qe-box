@@ -20,12 +20,13 @@ cd cli/xq-motest/swift
 swift build -c release
 export PATH="$PWD/.build/release:$PATH"
 
-xq-motest devicekit install --sim
+# DeviceKit runner must already be installed by agent-host infra
+xq-motest devicekit start --sim --device <UDID>
 xq-motest map
 xq-motest tap @e3
 ```
 
-Docs: [`cli/xq-motest/README.md`](cli/xq-motest/README.md) · skill: `gh skill install ExperienceQuality/xq-qe-box xq-motest`
+Docs: [`cli/xq-motest/README.md`](cli/xq-motest/README.md) · skill: `gh skill install ExperienceQuality/xq-qe-box xq-motest` · ADR-0001 (runner preinstalled)
 
 ## Optional: agent-device
 

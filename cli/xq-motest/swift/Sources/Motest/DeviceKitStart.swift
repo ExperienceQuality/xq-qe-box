@@ -31,7 +31,7 @@ enum DeviceKitStart {
             throw CLIError.runtime(message.trimmingCharacters(in: .whitespacesAndNewlines), hint: "")
         }
 
-        try HealthWait.poll(port: port, timeoutSec: 30)
+        try DeviceKitRuntime.waitUntilHealthy(port: port, timeoutSec: 30)
         try writeStartedJSON(config: config, udid: udid, bundleID: bundleID, port: port, mode: "sim")
     }
 
@@ -69,7 +69,7 @@ enum DeviceKitStart {
         try process.run()
 
         do {
-            try HealthWait.poll(
+            try DeviceKitRuntime.waitUntilHealthy(
                 port: port,
                 timeoutSec: 90,
                 logHint: logFile.path

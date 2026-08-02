@@ -3,7 +3,8 @@ name: xq-motest
 description: >-
   Automate iOS simulators or USB devices with the xq-motest CLI and DeviceKit
   WebSocket JSON-RPC. Use for map/@ref/tap loops, UI inspection, app launch,
-  devicekit install/start, or when stdout must be agent-native JSON.
+  devicekit start/status, or when stdout must be agent-native JSON. Assumes
+  DeviceKit runner is preinstalled by infra.
 license: MIT
 ---
 
@@ -18,6 +19,7 @@ Default stdout is **compact JSON**. Use `--pretty` only for humans.
 
 - macOS 13+, Xcode 15+, Swift 5.9+
 - Booted simulator or trusted USB device (for live runs)
+- **DeviceKit runner (`.app` / `.ipa`) already installed** on the target by agent-host infra — this CLI does not install it
 
 ```bash
 cd cli/xq-motest/swift
@@ -32,15 +34,14 @@ Offline verification (no DeviceKit): `bash cli/xq-motest/scripts/run-all.sh`
 
 ### Automate (default)
 
-1. **Ensure DeviceKit is up** — by default RPC verbs auto-start the installed runner when `/health` is down (`--no-ensure-runtime` to disable). First-time setup:
+1. **Ensure DeviceKit is up** — by default RPC verbs auto-start the installed runner when `/health` is down (`--no-ensure-runtime` to disable):
 
    ```bash
-   xq-motest devicekit install --sim
-   xq-motest devicekit start --sim   # optional; map/tap will start if needed
+   xq-motest devicekit start --sim --device <UDID>   # optional; map/tap will start if needed
    xq-motest health
    ```
 
-   If `health` fails, run `devicekit status` and follow the `hint` in stderr.
+   If `health` fails, run `devicekit status` and follow the `hint` in stderr (usually infra must install the runner).
 
 2. **Launch the app under test** (when needed):
 
@@ -70,11 +71,8 @@ Read [agent loop](references/agent-loop.md) for response tiers, env vars, and re
 
 ```bash
 xq-motest devicekit status
-xq-motest devicekit install --sim [--device UDID]
 xq-motest devicekit start --sim [--device UDID]
 ```
-
-Real device install requires `--provisioning-profile PATH`. See module README.
 
 ## Non-negotiable rules
 
@@ -82,7 +80,7 @@ Real device install requires `--provisioning-profile PATH`. See module README.
 - **Action vs data:** `tap`, `type`, `launch`, `screenshot` → `{"ok":true}` only. `map`, `diff map`, `dump`, `rpc`, `health` → full `result`.
 - **Do not parse discarded RPC bodies** on action calls; re-`map` when you need UI state.
 - **State dir:** `~/.xq-motest/` (or `XQ_MOTEST_STATE_DIR`). Refs invalidate after UI changes — always re-map.
-- **No MobileCLI** — this CLI owns install/start; do not substitute another control plane.
+- **Infra owns DeviceKit install** — do not expect `devicekit install` on this CLI; do not substitute MobileCLI for Session traffic.
 - **Globals via env** when scripting: `XQ_MOTEST_BASE_URL`, `XQ_MOTEST_TIMEOUT`, `XQ_MOTEST_DEVICE`.
 
 ## Install this skill
