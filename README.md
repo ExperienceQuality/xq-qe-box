@@ -1,59 +1,45 @@
 # xq-qe-box
 
-ExperienceQuality Satellite for **agent-native QE**: skills (skills registry), install script, and room for future CLI/packages.
+ExperienceQuality Satellite for **agent-native QE**: DeviceKit-direct CLI (`xq-motest`), skills, and optional agent-device tooling.
 
-Wraps upstream [agent-device](https://github.com/callstack/agent-device) — this repo does not reimplement device automation.
-
-**Hub satellite ref:** catalogue row + Ticket label [`satellite:xq-qe-box`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/satellites.md) · Spec [`docs/specs/xq-qe-box.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md)
+**Hub satellite ref:** [`satellite:xq-qe-box`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/satellites.md) · Spec [`docs/specs/xq-qe-box.md`](https://github.com/ExperienceQuality/xq-hub/blob/main/docs/specs/xq-qe-box.md)
 
 ## Layout
 
 ```
-skills/
-  xq-mobile-auto-test/
-    SKILL.md                 # Agent Skills frontmatter + instructions
-    scripts/
-      install-cli.sh         # pinned agent-device install (part of the skill)
-packages/                    # reserved for future packages
-cli/                         # reserved (add when needed)
+cli/xq-motest/                 # Swift CLI → DeviceKit JSON-RPC (primary)
+skills/xq-motest/              # skill for xq-motest
+skills/xq-mobile-auto-test/    # optional: pinned agent-device install + router
+packages/                      # reserved
 ```
 
-This matches [`gh skill publish`](https://cli.github.com/manual/gh_skill_publish) discovery: `skills/*/SKILL.md`, with optional `scripts/` beside `SKILL.md` ([Agent Skills spec](https://agentskills.io/specification)).
-
-## Install agent-device
+## Primary: xq-motest (DeviceKit)
 
 ```bash
-# from repo root
-bash skills/xq-mobile-auto-test/scripts/install-cli.sh
+cd cli/xq-motest/swift
+swift build -c release
+export PATH="$PWD/.build/release:$PATH"
 
-# or
-curl -fsSL https://raw.githubusercontent.com/ExperienceQuality/xq-qe-box/main/skills/xq-mobile-auto-test/scripts/install-cli.sh | bash
+xq-motest devicekit install --sim
+xq-motest map
+xq-motest tap @e3
 ```
 
-Pin override: `AGENT_DEVICE_VERSION=0.20.3 bash skills/xq-mobile-auto-test/scripts/install-cli.sh`
+Docs: [`cli/xq-motest/README.md`](cli/xq-motest/README.md) · skill: `gh skill install ExperienceQuality/xq-qe-box xq-motest`
 
-Requires Node.js ≥ 22.12.
+## Optional: agent-device
 
-## Skills (`gh skill` / skills.sh)
+```bash
+bash skills/xq-mobile-auto-test/scripts/install-cli.sh
+gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
+```
 
-Validate (no release):
+## Skills validation
 
 ```bash
 gh skill publish --dry-run
 ```
 
-Install / preview:
-
-```bash
-gh skill preview ExperienceQuality/xq-qe-box xq-mobile-auto-test
-gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
-
-# also works:
-npx skills add ExperienceQuality/xq-qe-box --skill xq-mobile-auto-test
-```
-
-Publish (when ready): `gh skill publish --tag v0.1.0` — adds `agent-skills` topic and creates a release. Do not publish until explicitly asked.
-
 ## License
 
-MIT
+MIT (XQ code). DeviceKit itself is upstream Mobile Next — respect its license when redistributing runner artifacts.
