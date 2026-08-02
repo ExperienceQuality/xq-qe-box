@@ -10,6 +10,7 @@ ExperienceQuality Satellite for **agent-native QE**: DeviceKit-direct CLI (`xq-m
 cli/xq-motest/                 # Swift CLI → DeviceKit JSON-RPC (primary)
 skills/xq-motest/              # skill for xq-motest
 skills/xq-mobile-auto-test/    # optional: pinned agent-device install + router
+skills/quality-*/              # Hub quality standards (sizes, hermeticity, spots)
 packages/                      # reserved
 ```
 
@@ -33,6 +34,18 @@ Docs: [`cli/xq-motest/README.md`](cli/xq-motest/README.md) · skill: `gh skill i
 ```bash
 bash skills/xq-mobile-auto-test/scripts/install-cli.sh
 gh skill install ExperienceQuality/xq-qe-box xq-mobile-auto-test
+```
+
+## Quality standards skills
+
+Hub [`quality/`](https://github.com/ExperienceQuality/xq-hub/tree/main/quality) is the editorial source. Each `skills/quality-*/references/` folder vendors those docs for offline agent use (skills must not `curl` Hub).
+
+```bash
+gh skill install ExperienceQuality/xq-qe-box quality-principles
+gh skill install ExperienceQuality/xq-qe-box quality-asset-strategy
+gh skill install ExperienceQuality/xq-qe-box quality-test-plan
+gh skill install ExperienceQuality/xq-qe-box quality-reporting
+gh skill install ExperienceQuality/xq-qe-box quality-controlling
 ```
 
 ## Skills validation
